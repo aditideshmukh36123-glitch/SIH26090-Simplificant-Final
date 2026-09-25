@@ -1,0 +1,208 @@
+// SIH26090 — Core Backend Prisma Schema
+// Datasource: Neon Serverless PostgreSQL (connection pooling via DATABASE_URL)
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  BUYER
+  ARTISAN
+  PRODUCER
+  DELIVERY
+  ADMIN
+}
+
+enum OrderStatus {
+  CONFIRMED
+  IN_WORKSHOP
+  QUALITY_PASSED
+  READY_FOR_PICKUP
+  SHIPPED
+  IN_TRANSIT
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+  DISPUTED
+}
+
+enum EscrowStatus {
+  INITIATED
+  AUTHORIZED
+  HELD_IN_ESCROW
+  SHIPPED_PENDING_RELEASE
+  DELIVERED_PENDING_CONFIRMATION
+  RELEASED_TO_SELLER
+  REFUNDED_TO_BUYER
+}
+
+enum CraftCategory {
+  POTTERY
+  TEXTILE
+  WOODWORK
+  METALWARE
+  PAINTING
+  LEATHERWORK
+  JEWELLERY
+  STONEWORK
+  CANE_BAMBOO
+  OTHER
+}
+
+model User {
+  id           String    @id @default(uuid())
+  phone        String    @unique
+  email        String?   @unique
+  passwordHash String
+  name         String
+  role         Role      @default(BUYER)
+  avatarUrl    String?
+  giCluster    String?
+  bankAccount  Json?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  products           Product[] @relation("ArtisanProducts")
+  buyerOrders        Order[]   @relation("BuyerOrders")
+  assignedDeliveries Order[]   @relation("DeliveryAgentOrders")
+  reviews            Review[]
+  refreshSessions    RefreshSession[]
+
+  @@map("users")
+}
+
+model Product {
+  id                  String        @id @default(uuid())
+  artisanId           String
+  artisan             User          @relation("ArtisanProducts", fields: [artisanId], references: [id], onDelete: Cascade)
+  title               String
+  titleHi             String?
+  description         Json // Localized: { "en": "...", "hi": "...", "mr": "..." }
+  category            CraftCategory
+  price               Decimal       @db.Decimal(10, 2)
+  b2bPrice            Decimal?      @db.Decimal(10, 2)
+
+  // Fair-Pricing Guild Valuation Attributes
+  rawMaterialCost     Decimal?      @db.Decimal(10, 2)
+  laborHours          Decimal?      @db.Decimal(6, 2)
+  hourlyWage          Decimal?      @db.Decimal(10, 2)
+  retailMiddlemanEst  Decimal?      @db.Decimal(10, 2)
+  authenticityGrade   String?
+  lineageGI           String?
+  giTagged            Boolean       @default(false)
+
+  // Media
+  cleanImageUrl       String
+  rawWorkshopImageUrl String?
+  originalAudioUrl    String?
+  materials           String[]
+  tags                String[]
+  stockQuantity       Int           @default(1)
+  isPublished         Boolean       @default(true)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  orderItems OrderItem[]
+  reviews    Review[]
+
+  @@index([artisanId])
+  @@index([category])
+  @@map("products")
+}
+
+model Order {
+  id                  String      @id @default(uuid())
+  displayId           String      @unique
+  buyerId             String
+  buyer               User        @relation("BuyerOrders", fields: [buyerId], references: [id])
+  deliveryAgentId     String?
+  deliveryAgent       User?       @relation("DeliveryAgentOrders", fields: [deliveryAgentId], references: [id])
+
+  totalAmount         Decimal     @db.Decimal(10, 2)
+  status              OrderStatus @default(CONFIRMED)
+  shippingAddress     Json
+  carrierName         String?
+  trackingAwb         String?     @unique
+  deliveryOtpHashed   String
+  deliveryOtpEncrypted String
+  currentLocation     String?
+
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  items             OrderItem[]
+  escrowTransaction EscrowTransaction?
+
+  @@index([buyerId])
+  @@index([deliveryAgentId])
+  @@index([status])
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String  @id @default(uuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int     @default(1)
+  unitPrice Decimal @db.Decimal(10, 2)
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_items")
+}
+
+model EscrowTransaction {
+  id                String       @id @default(uuid())
+  orderId           String       @unique
+  order             Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  amount            Decimal      @db.Decimal(10, 2)
+  status            EscrowStatus @default(INITIATED)
+  paymentGatewayRef String?
+
+  heldAt        DateTime?
+  otpVerifiedAt DateTime?
+  releasedAt    DateTime?
+  disputedAt    DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([status])
+  @@map("escrow_transactions")
+}
+
+model Review {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  rating    Int
+  comment   String?  @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+  @@map("reviews")
+}
+
+model RefreshSession {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  userAgent String?
+  ip        String?
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@map("refresh_sessions")
+}

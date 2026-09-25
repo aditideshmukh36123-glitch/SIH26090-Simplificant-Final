@@ -1,0 +1,23 @@
+fastapi>=0.115.6,<1.0.0
+uvicorn[standard]>=0.34.0
+python-multipart>=0.0.18
+python-dotenv>=1.0.1
+pydantic>=2.10.4
+pydantic-settings>=2.7.1
+anyio>=4.6.0
+
+# Vision / Image (CPU build; switch rembg[gpu] + onnxruntime-gpu for inference servers)
+rembg>=2.0.64
+onnxruntime>=1.21.0
+Pillow>=11.1.0
+numpy>=2.2.1
+
+# Cloud Storage
+cloudinary>=1.40.0
+
+# Multimodal AI (google.generativeai is EOL; use google-genai)
+google-genai>=1.0.0
+
+# Type checking / Lint (dev only, pinned here for reproducibility)
+mypy>=1.14.1
+ruff>=0.8.6

@@ -1,0 +1,577 @@
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import 'tailwindcss';
+
+@theme inline {
+  --font-serif: 'Fraunces', Georgia, serif;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  
+  --color-sand-50: #FDFBF7;
+  --color-sand-100: #F7F2E9;
+  --color-sand-200: #FBF8F1;
+  --color-sand-300: #EFE8D8;
+  --color-sand-400: #E4DAC8;
+  
+  --color-espresso-900: #241C15;
+  --color-espresso-800: #3A2C20;
+  --color-espresso-600: #5B5750;
+  --color-espresso-500: #6B6255;
+  --color-espresso-400: #9C9182;
+  --color-espresso-300: #B0A489;
+  
+  --color-gold-500: #C9922E;
+  --color-gold-400: #DCA33C;
+  --color-terracotta-500: #B7592F;
+  --color-wood-700: #7A4A28;
+  --color-indigo-800: #35415E;
+  --color-sage-600: #6B7A4F;
+}
+
+html, body, #root {
+  min-height: 100%;
+  background-color: #FDFBF7;
+  color: #241C15;
+  font-family: 'Inter', sans-serif;
+}
+
+h1, h2, h3, .font-fraunces {
+  font-family: 'Fraunces', Georgia, serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Custom subtle scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #F7F2E9;
+}
+::-webkit-scrollbar-thumb {
+  background: #E4DAC8;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #C9922E;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   MOBILE RESPONSIVE OVERRIDES — Clean, Minimalistic Flipkart/Amazon-Style UX
+   Applied on phones (max-width: 768px)
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+
+  /* ── Base ───────────────────────────────────────────────────────────────── */
+  html {
+    font-size: 15px;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    overflow-x: hidden;
+    overscroll-behavior-y: contain;
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     HEADER — Compact Row: Brand + Icons | Search | Categories
+     ══════════════════════════════════════════════════════════════════════════ */
+
+  /* --- Top MoSJE Banner: Compact --- */
+  .mosje-banner {
+    font-size: 10px !important;
+    padding: 5px 10px !important;
+    line-height: 1.4;
+  }
+  .mosje-banner .mosje-extra {
+    display: none !important;
+  }
+
+  /* --- Sticky Header --- */
+  header.sticky {
+    padding-bottom: 0;
+  }
+
+  header.sticky > .header-main-row {
+    padding: 8px 12px !important;
+  }
+
+  /* --- Brand Row --- */
+  .header-brand-row {
+    gap: 6px !important;
+    flex-wrap: nowrap !important;
+  }
+
+  .header-brand .brand-title {
+    font-size: 1.05rem !important;
+  }
+
+  .header-brand .brand-subtitle {
+    display: none !important;
+  }
+
+  .header-brand .brand-badge {
+    font-size: 8px !important;
+    padding: 1px 6px !important;
+  }
+
+  /* *** Hide the DESKTOP search bar on mobile *** */
+  .header-desktop-search {
+    display: none !important;
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     HEADER ACTIONS — Clickable, Compact Icon Buttons
+     ══════════════════════════════════════════════════════════════════════════ */
+  .header-actions {
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    flex-wrap: nowrap !important;
+    flex-shrink: 0;
+  }
+
+  /* Make ALL action buttons properly clickable with good touch targets */
+  .header-actions button,
+  .header-actions .user-account-btn,
+  .header-actions .lang-btn,
+  .header-actions .notification-btn {
+    pointer-events: auto !important;
+    cursor: pointer !important;
+    position: relative;
+    z-index: 10;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+  }
+
+  /* User account: avatar-only, properly clickable */
+  .header-actions .user-account-btn {
+    padding: 4px 6px !important;
+    min-height: 36px !important;
+    min-width: 36px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 50% !important;
+  }
+  .header-actions .user-account-btn .user-details {
+    display: none !important;
+  }
+  /* Hide the dropdown arrow text on mobile */
+  .header-actions .user-account-btn > span:last-child {
+    display: none !important;
+  }
+
+  /* Language: flag-only, properly clickable */
+  .header-actions .lang-btn {
+    padding: 4px 6px !important;
+    min-height: 36px !important;
+    min-width: 36px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 50% !important;
+    gap: 0 !important;
+  }
+  .header-actions .lang-btn .lang-label,
+  .header-actions .lang-btn > span:last-child {
+    display: none !important;
+  }
+
+  /* Notification bell */
+  .header-actions .notification-btn {
+    width: 36px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    min-width: 36px !important;
+  }
+
+  /* Hide text labels on ALL action buttons */
+  .header-actions .action-btn-label {
+    display: none !important;
+  }
+
+  /* Compact all action buttons */
+  .header-actions > div > button,
+  .header-actions > button {
+    padding: 4px 8px !important;
+    font-size: 13px !important;
+    min-height: 36px !important;
+    min-width: 36px !important;
+    gap: 2px !important;
+    border-radius: 50% !important;
+  }
+
+  /* Hide non-essential buttons entirely */
+  .header-actions .action-hide-mobile {
+    display: none !important;
+  }
+
+  /* Dropdowns from header must be above everything */
+  .user-dropdown,
+  .lang-dropdown {
+    z-index: 9999 !important;
+  }
+
+  .user-dropdown {
+    width: calc(100vw - 24px) !important;
+    right: -8px !important;
+    position: fixed !important;
+    top: 60px !important;
+    left: 12px !important;
+  }
+
+  .lang-dropdown {
+    position: fixed !important;
+    top: 60px !important;
+    right: 12px !important;
+    left: auto !important;
+    max-width: calc(100vw - 24px);
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     MOBILE SEARCH BAR — Single, Full Width
+     ══════════════════════════════════════════════════════════════════════════ */
+  .mobile-search-bar {
+    padding: 6px 12px 8px 12px !important;
+  }
+
+  .mobile-search-bar .search-container {
+    border-radius: 12px !important;
+    border-width: 1.5px !important;
+  }
+
+  .mobile-search-bar input[type="text"] {
+    font-size: 14px !important;
+    padding: 8px 6px !important;
+    min-height: 38px !important;
+  }
+
+  .mobile-search-bar button {
+    min-height: 32px !important;
+    min-width: 32px !important;
+  }
+
+  .mobile-search-bar .search-action-btn {
+    padding: 6px 12px !important;
+    font-size: 11px !important;
+    border-radius: 10px !important;
+    min-height: 34px !important;
+    min-width: auto !important;
+  }
+
+  .mobile-search-bar .search-dropdown {
+    left: 0 !important;
+    right: 0 !important;
+    border-radius: 12px !important;
+    max-height: 60vh !important;
+    z-index: 9999 !important;
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     HERO SECTION — Clean, Minimalistic (No Duplicate Search, Fewer Buttons)
+     ══════════════════════════════════════════════════════════════════════════ */
+
+  /* Hide hero search bar on mobile (header has it) */
+  .hero-search-bar {
+    display: none !important;
+  }
+
+  .hero-banner {
+    min-height: 180px !important;
+    border-radius: 14px !important;
+  }
+
+  .hero-banner .hero-content {
+    padding: 20px 16px !important;
+  }
+
+  .hero-banner .hero-tagline {
+    font-size: 9px !important;
+    margin-bottom: 6px !important;
+    padding: 2px 8px !important;
+  }
+
+  .hero-banner .hero-title {
+    font-size: 1.3rem !important;
+    line-height: 1.25 !important;
+    margin-bottom: 4px !important;
+  }
+
+  .hero-banner .hero-subtitle {
+    font-size: 11px !important;
+    margin-bottom: 10px !important;
+  }
+
+  /* Hide ALL hero CTA buttons except "Explore Catalog" on mobile */
+  .hero-cta-buttons .hero-cta-secondary {
+    display: none !important;
+  }
+
+  /* Make the explore button compact */
+  .hero-cta-buttons .hero-cta-primary {
+    padding: 8px 16px !important;
+    font-size: 12px !important;
+    min-height: 36px !important;
+    min-width: auto !important;
+  }
+
+  /* Hide trending search chips on mobile hero (too cluttered) */
+  .hero-trending-chips {
+    display: none !important;
+  }
+
+  /* Hide active search result indicator in hero */
+  .hero-search-indicator {
+    display: none !important;
+  }
+
+  /* Hide Impact Highlights Strip on mobile */
+  .impact-strip {
+    display: none !important;
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     CATEGORY STRIP — Smooth Horizontal Scroll
+     ══════════════════════════════════════════════════════════════════════════ */
+  .category-strip {
+    padding: 6px 10px !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .category-strip::-webkit-scrollbar {
+    display: none;
+  }
+
+  .category-strip .category-scroll {
+    gap: 4px !important;
+    min-width: max-content;
+  }
+
+  .category-strip .category-scroll button {
+    font-size: 11px !important;
+    padding: 6px 12px !important;
+    border-radius: 18px !important;
+    white-space: nowrap;
+    flex-shrink: 0;
+    min-height: 32px !important;
+    min-width: auto !important;
+  }
+
+  .category-strip .category-extra {
+    display: none !important;
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     CATALOG SECTION — Clean, Minimal Header
+     ══════════════════════════════════════════════════════════════════════════ */
+
+  /* Hide the "Add Craft" button in catalog header on mobile */
+  .catalog-add-craft-btn {
+    display: none !important;
+  }
+
+  /* Sub-filter category pills: compact */
+  .catalog-sub-filters {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .catalog-sub-filters::-webkit-scrollbar {
+    display: none;
+  }
+  .catalog-sub-filters button {
+    font-size: 11px !important;
+    padding: 5px 10px !important;
+    min-height: 30px !important;
+    min-width: auto !important;
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     PRODUCT GRID — 2 Columns
+     ══════════════════════════════════════════════════════════════════════════ */
+  .product-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+  }
+
+  @media (max-width: 380px) {
+    .product-grid {
+      grid-template-columns: 1fr !important;
+    }
+  }
+
+  .product-card {
+    border-radius: 12px !important;
+  }
+
+  .product-card img {
+    border-radius: 10px 10px 0 0 !important;
+  }
+
+  .product-card button {
+    min-height: 36px !important;
+    min-width: auto !important;
+    font-size: 11px !important;
+    padding: 6px 10px !important;
+    border-radius: 10px !important;
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     GENERAL MOBILE FIXES
+     ══════════════════════════════════════════════════════════════════════════ */
+
+  /* Prevent iOS zoom on input focus */
+  input[type="text"],
+  input[type="search"],
+  input[type="email"],
+  input[type="tel"],
+  textarea {
+    font-size: 16px !important;
+  }
+
+  select {
+    font-size: 14px !important;
+  }
+
+  /* Modals — full screen */
+  .fixed.inset-0 {
+    padding: 0 !important;
+  }
+
+  .fixed.inset-0 > div,
+  .fixed.inset-0 > .bg-white,
+  .fixed.inset-0 > .bg-\[\#FDFBF7\] {
+    max-width: 100% !important;
+    max-height: 100% !important;
+    width: 100% !important;
+    height: 100% !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+  }
+
+  .max-w-md, .max-w-lg, .max-w-xl, .max-w-2xl, .max-w-3xl, .max-w-4xl {
+    max-width: 100% !important;
+  }
+
+  /* Scrollable containers */
+  .overflow-y-auto, .overflow-auto {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+
+  /* Chat widget */
+  .fixed.bottom-4.right-4,
+  .fixed.bottom-6.right-6 {
+    bottom: 16px !important;
+    right: 12px !important;
+  }
+
+  .fixed.bottom-20.right-4,
+  .fixed.bottom-24.right-6 {
+    left: 8px !important;
+    right: 8px !important;
+    bottom: 72px !important;
+    width: auto !important;
+    max-height: 70vh !important;
+  }
+
+  /* Footer */
+  footer {
+    padding-bottom: 20px;
+  }
+
+  footer .grid {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+
+  /* Dashboard Tables */
+  table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    font-size: 12px;
+  }
+
+  th, td {
+    padding: 8px 10px;
+    white-space: nowrap;
+  }
+
+  /* Camera modals */
+  video, canvas {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+
+  /* Toast */
+  .fixed.bottom-6.right-6 {
+    left: 12px !important;
+    right: 12px !important;
+    bottom: 16px !important;
+    max-width: 100% !important;
+  }
+
+  /* Animations */
+  @keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  .animate-in {
+    animation: slideUp 0.25s ease-out;
+  }
+
+  /* Main content spacing */
+  main.main-content {
+    padding: 12px 10px !important;
+  }
+
+  /* Notification badge */
+  .notif-badge {
+    min-width: 16px;
+    min-height: 16px;
+    font-size: 9px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   EXTRA SMALL SCREENS (< 400px)
+   ═══════════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 400px) {
+  .header-brand .brand-title {
+    font-size: 0.95rem !important;
+  }
+
+  .product-grid {
+    gap: 8px !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   WEBVIEW-SPECIFIC ENHANCEMENTS
+   ═══════════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  *:not(input):not(textarea):not(select):not(button) {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  input, textarea, select, button {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+
+  /* Safe area insets for notched phones */
+  body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}

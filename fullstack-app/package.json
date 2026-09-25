@@ -1,0 +1,28 @@
+{
+  "name": "sih26090",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Dual-sided artisan marketplace & logistics-escrow platform",
+  "workspaces": [
+    "apps/*",
+    "services/*"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "backend:dev": "npm run dev --workspace @sih26090/core-backend",
+    "backend:build": "npm run build --workspace @sih26090/core-backend",
+    "backend:typecheck": "npm run typecheck --workspace @sih26090/core-backend",
+    "web:dev": "npm run dev --workspace @sih26090/web",
+    "web:build": "npm run build --workspace @sih26090/web",
+    "mobile:start": "npm run start --workspace mobile"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true,
+    "esbuild@0.25.12": true,
+    "@prisma/client@5.22.0": true,
+    "@prisma/engines@5.22.0": true,
+    "prisma@5.22.0": true
+  }
+}
