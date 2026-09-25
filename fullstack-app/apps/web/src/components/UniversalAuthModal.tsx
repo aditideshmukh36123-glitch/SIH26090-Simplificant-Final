@@ -144,10 +144,33 @@ export default function UniversalAuthModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ identifier: cleanId, password: cleanSecret }),
       })
-      const json = await res.json()
+      const json = await res.json().catch(() => null)
       
-      if (!res.ok || !json.success) {
-        setErrorMessage(json.error?.message || "Invalid credentials. Please verify your Email/Mobile and Password/PIN.")
+      if (!res.ok || !json || !json.success) {
+        // Check local users list as fallback
+        const matched = usersList.find(
+          (u) =>
+            u.email.toLowerCase() === cleanId ||
+            u.mobile.replace(/\s+/g, "") === cleanId.replace(/\s+/g, ""),
+        )
+        if (
+          matched &&
+          (matched.password === cleanSecret || matched.pin === cleanSecret)
+        ) {
+          setSuccessMessage(
+            `Welcome back, ${matched.name}! (${matched.role.toUpperCase()})`,
+          )
+          setTimeout(() => {
+            onLoginSuccess(matched, matched.role)
+            onClose()
+          }, 500)
+          return
+        }
+
+        setErrorMessage(
+          json?.error?.message ||
+            "Invalid credentials. Please verify your Email/Mobile and Password/PIN.",
+        )
         return
       }
 

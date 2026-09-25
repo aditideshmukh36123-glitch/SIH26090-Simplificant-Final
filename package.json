@@ -1,0 +1,15 @@
+{
+  "name": "simplificant",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "fullstack-app/apps/web"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=@sih26090/web",
+    "build": "npm run build --workspace=@sih26090/web",
+    "preview": "npm run preview --workspace=@sih26090/web",
+    "lint": "npm run build --workspace=@sih26090/web"
+  }
+}

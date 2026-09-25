@@ -1,0 +1,7 @@
+{
+  "name": "Simplificant — Artisan Marketplace & Logistics Platform",
+  "description": "Dual-sided artisan marketplace & logistics-escrow platform connecting traditional craftspeople with conscious buyers",
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

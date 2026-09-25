@@ -501,7 +501,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     isActive: true,
   },
   {
-    id: 103,
+    id: 106,
     artisan_id: 3,
     name: makeCraftLoc(
       "Handcrafted Terracotta Water Vessel (Matka) & 4 Cups Set",

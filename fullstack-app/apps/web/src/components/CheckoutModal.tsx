@@ -102,8 +102,8 @@ export default function CheckoutModal({
           },
           body: JSON.stringify(orderPayload)
         })
-        const json = await res.json()
-        if (!res.ok || !json.success) {
+        const json = await res.json().catch(() => null)
+        if (!res.ok || !json || !json.success) {
           console.warn("Backend order failed", json)
           // Fall back to mock flow if backend fails to avoid blocking MVP
         } else {

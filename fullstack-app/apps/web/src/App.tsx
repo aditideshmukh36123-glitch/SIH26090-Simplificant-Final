@@ -16,6 +16,7 @@ import BuyerSupportChatModal from "./components/BuyerSupportChatModal"
 import NotificationPanel from "./components/NotificationPanel"
 import AddCraftOrMaterialModal from "./components/AddCraftOrMaterialModal"
 import UniversalAuthModal from "./components/UniversalAuthModal"
+import EditorialLandingPage from "./components/EditorialLandingPage"
 
 import {
   AIValuationResult,
@@ -291,6 +292,15 @@ export default function App() {
     }
   })
   const [userDropdownOpen, setUserDropdownOpen] = useState(false)
+  const [buyerExperience, setBuyerExperience] = useState<"landing" | "catalog">("landing")
+  const [authTargetRoleHint, setAuthTargetRoleHint] = useState<Role | null>(null)
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem("simplificant_is_logged_in") === "true"
+    } catch {
+      return false
+    }
+  })
 
   // ─── 2. LANGUAGE STATE ──────────────────────────────────────────────────────
   const [selectedLanguage, setSelectedLanguage] = useState<LanguageCode>("en")
@@ -298,6 +308,22 @@ export default function App() {
 
   // ─── 3. CATALOG & PRODUCT STATE ─────────────────────────────────────────────
   const [products, setProducts] = useState<Product[]>(() => {
+    const sanitizeAndDedup = (list: Product[]): Product[] => {
+      const seen = new Set<string | number>()
+      const clean: Product[] = []
+      for (const p of list) {
+        let id = p.id
+        if (id === 103 && (p.name?.en?.includes("Matka") || p.name?.en?.includes("Water Vessel")) && clean.some((item) => item.id === 103)) {
+          id = 106
+        }
+        if (!seen.has(id)) {
+          seen.add(id)
+          clean.push(id !== p.id ? { ...p, id } : p)
+        }
+      }
+      return clean
+    }
+
     try {
       const saved = localStorage.getItem(
         "simplificant_products_2026_handmade_v5",
@@ -316,9 +342,9 @@ export default function App() {
               (ip) => !parsedOld.some((p) => p.id === ip.id),
             ),
           ]
-          return merged.length > 0 ? merged : INITIAL_PRODUCTS
+          return sanitizeAndDedup(merged.length > 0 ? merged : INITIAL_PRODUCTS)
         }
-        return INITIAL_PRODUCTS
+        return sanitizeAndDedup(INITIAL_PRODUCTS)
       }
       const parsed: Product[] = JSON.parse(saved)
       const merged = [
@@ -327,9 +353,9 @@ export default function App() {
         ),
         ...INITIAL_PRODUCTS.filter((ip) => !parsed.some((p) => p.id === ip.id)),
       ]
-      return merged.length > 0 ? merged : INITIAL_PRODUCTS
+      return sanitizeAndDedup(merged.length > 0 ? merged : INITIAL_PRODUCTS)
     } catch {
-      return INITIAL_PRODUCTS
+      return sanitizeAndDedup(INITIAL_PRODUCTS)
     }
   })
   const [selectedCategory, setSelectedCategory] = useState<string>("All")
@@ -518,9 +544,12 @@ export default function App() {
   // Load products from backend on mount
   useEffect(() => {
     fetch("/api/v1/products?sortBy=newest")
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) return null
+        return r.json()
+      })
       .then((data) => {
-        if (data && data.success && Array.isArray(data.data?.items)) {
+        if (data && data.success && Array.isArray(data.data?.items) && data.data.items.length > 0) {
           const BACKEND_TO_FRONTEND_CATEGORY: Record<string, CraftCategory> = {
             POTTERY: "Pottery",
             TEXTILE: "Textile",
@@ -553,12 +582,18 @@ export default function App() {
               ...backendProducts,
               ...prev.filter((p) => !backendProducts.some((bp) => bp.id === p.id)),
             ]
-            localStorage.setItem("simplificant_products_2026_handmade_v5", JSON.stringify(merged))
-            return merged
+            const seen = new Set<string | number>()
+            const cleanMerged = merged.filter((p) => {
+              if (seen.has(p.id)) return false
+              seen.add(p.id)
+              return true
+            })
+            localStorage.setItem("simplificant_products_2026_handmade_v5", JSON.stringify(cleanMerged))
+            return cleanMerged
           })
         }
       })
-      .catch((e) => console.error("Backend unavailable, using local products", e))
+      .catch((e) => console.warn("Backend unavailable, using local products", e?.message || e))
   }, [])
 
   // Sync products and orders to localStorage
@@ -782,6 +817,12 @@ export default function App() {
     if (matchedUser) {
       setCurrentUser(matchedUser)
     }
+    setIsLoggedIn(true)
+    try {
+      localStorage.setItem("simplificant_is_logged_in", "true")
+    } catch {
+      // ignore
+    }
     setUserDropdownOpen(false)
     showToast(
       `Logged in as ${matchedUser?.name || roleKey.toUpperCase()} (${roleKey.toUpperCase()})`,
@@ -795,6 +836,12 @@ export default function App() {
     }))
     setCurrentUser(newUser)
     setCurrentRole(newUser.role)
+    setIsLoggedIn(true)
+    try {
+      localStorage.setItem("simplificant_is_logged_in", "true")
+    } catch {
+      // ignore
+    }
     showToast(
       `Personal account registered: ${newUser.name} (${newUser.role.toUpperCase()})`,
     )
@@ -805,6 +852,12 @@ export default function App() {
     setCurrentUser(defaultBuyer)
     setCurrentRole("buyer")
     setUserDropdownOpen(false)
+    setIsLoggedIn(false)
+    try {
+      localStorage.setItem("simplificant_is_logged_in", "false")
+    } catch {
+      // ignore
+    }
     showToast("Signed out of personal account. Switched to Guest Buyer.")
   }
 
@@ -1114,62 +1167,129 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] text-[#241C15] flex flex-col selection:bg-[#C9922E]/20">
-      {/* ─── Top MoSJE Official Banner ────────────────────────────────────── */}
-      <div className="mosje-banner bg-[#241C15] text-[#F7F2E9] text-[11px] sm:text-xs py-2 px-4 border-b border-[#3A2C20]">
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <span className="bg-[#C9922E] text-[#241C15] text-[10px] font-bold px-2 py-0.5 rounded-full tracking-wider uppercase">
-              MoSJE
-            </span>
-            <span className="text-[#E4DAC8] font-medium">
-              {announcementText}
-            </span>
-          </div>
+      {/* ─── MODULE 1: EDITORIAL LANDING EXPERIENCE (BUYER ENTRY) ─────────── */}
+      {currentRole === "buyer" && buyerExperience === "landing" ? (
+        <EditorialLandingPage
+          products={products}
+          selectedLanguage={selectedLanguage}
+          onSelectLanguage={setSelectedLanguage}
+          onSelectProduct={(p) => setSelectedProductForDetail(p)}
+          onAddToCart={(p) => handleAddToCart(p)}
+          onEnterAsBuyer={() => {
+            setBuyerExperience("catalog")
+            window.scrollTo({ top: 0, behavior: "smooth" })
+          }}
+          onEnterAsArtist={() => {
+            handleSwitchAccountRole("artisan")
+            window.scrollTo({ top: 0, behavior: "smooth" })
+          }}
+          onOpenSearch={() => {
+            setBuyerExperience("catalog")
+            setIsSearchFocused(true)
+          }}
+          onOpenCart={() => setCartOpen(true)}
+          onOpenLogin={() => {
+            setAuthTargetRoleHint(null)
+            setUniversalAuthModalOpen(true)
+          }}
+          onOpenBuyerLogin={() => {
+            setAuthTargetRoleHint("buyer")
+            setUniversalAuthModalOpen(true)
+          }}
+          onOpenArtistLogin={() => {
+            setAuthTargetRoleHint("artisan")
+            setUniversalAuthModalOpen(true)
+          }}
+          onOpenWishlist={() => {
+            setBuyerExperience("catalog")
+            showToast("Opening craft collection.")
+          }}
+          cartCount={cart.reduce((s, i) => s + i.qty, 0)}
+          wishlistCount={currentUser.wishlist?.length || 0}
+          currentUser={currentUser}
+          isLoggedIn={isLoggedIn}
+          onLogout={handleLogout}
+          onSwitchRole={handleSwitchAccountRole}
+          onPerformSearchQuery={(q) => {
+            setSearchQuery(q)
+            setBuyerExperience("catalog")
+            handlePerformSearch(q)
+            window.scrollTo({ top: 0, behavior: "smooth" })
+          }}
+        />
+      ) : (
+        <>
+          {/* Top MoSJE Official Banner (Only shown for non-buyer, non-artisan roles or maintenance) */}
+          {currentRole !== "buyer" && currentRole !== "artisan" && (
+            <div className="mosje-banner bg-[#241C15] text-[#F7F2E9] text-[11px] sm:text-xs py-2 px-4 border-b border-[#3A2C20]">
+              <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="bg-[#C9922E] text-[#241C15] text-[10px] font-bold px-2 py-0.5 rounded-full tracking-wider uppercase">
+                    MoSJE
+                  </span>
+                  <span className="text-[#E4DAC8] font-medium">
+                    {announcementText}
+                  </span>
+                </div>
 
-          <div className="mosje-extra flex items-center gap-3 text-[11px] text-[#DCA33C]">
-            <span>{translate("dbtNotice", selectedLanguage)}</span>
-            <span className="text-[#9C9182] hidden sm:inline">|</span>
-            <span className="text-[#F7F2E9] hidden sm:inline">
-              Zero Commission Marketplace
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {siteSettings.maintenanceMode && (
-        <div className="bg-amber-600 text-white text-xs font-bold py-2 px-4 text-center flex items-center justify-center gap-2 shadow-inner animate-in fade-in">
-          <span>
-            ⚠️ Super Admin Alert: Platform is currently in Maintenance Mode.
-            Order fulfillment and catalog updates may experience slight delays.
-          </span>
-        </div>
-      )}
-
-      {/* ─── APP HEADER ───────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-40 bg-[#FDFBF7]/95 backdrop-blur-md border-b border-[#E4DAC8]">
-        {/* Row 1: Brand, Search, Camera AI Price Scanner, Role Selector & Actions */}
-        <div className="header-main-row max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5">
-          <div className="header-brand-row flex items-center justify-between gap-4 lg:gap-8">
-            {/* Brand Logo */}
-            <button
-              onClick={() => {
-                setCurrentRole("buyer")
-                setSelectedCategory("All")
-              }}
-              className="header-brand text-left shrink-0 cursor-pointer group"
-            >
-              <div className="flex items-center gap-2">
-                <span className="brand-title text-xl sm:text-2xl font-bold font-serif tracking-tight text-[#241C15] group-hover:text-[#B7592F] transition-colors">
-                  SIMPLIFICANT
-                </span>
-                <span className="brand-badge bg-[#B7592F]/15 text-[#B7592F] text-[9.5px] font-bold px-2 py-0.5 rounded-full tracking-wider uppercase">
-                  AI Artisan OS
-                </span>
+                <div className="mosje-extra flex items-center gap-3 text-[11px] text-[#DCA33C]">
+                  <span>{translate("dbtNotice", selectedLanguage)}</span>
+                  <span className="text-[#9C9182] hidden sm:inline">|</span>
+                  <span className="text-[#F7F2E9] hidden sm:inline">
+                    Zero Commission Marketplace
+                  </span>
+                </div>
               </div>
-              <p className="brand-subtitle text-[10px] text-[#8C7E6D] -mt-0.5 font-medium tracking-wide">
-                Digital Marketplace for Marginalized Artisans
-              </p>
-            </button>
+            </div>
+          )}
+
+          {siteSettings.maintenanceMode && (
+            <div className="bg-amber-600 text-white text-xs font-bold py-2 px-4 text-center flex items-center justify-center gap-2 shadow-inner animate-in fade-in">
+              <span>
+                ⚠️ Super Admin Alert: Platform is currently in Maintenance Mode.
+                Order fulfillment and catalog updates may experience slight delays.
+              </span>
+            </div>
+          )}
+
+          {/* ─── APP HEADER ───────────────────────────────────────────────────── */}
+          <header className="sticky top-0 z-40 bg-[#FDFBF7]/95 backdrop-blur-md border-b border-[#E4DAC8]">
+            {/* Row 1: Brand, Search, Camera AI Price Scanner, Role Selector & Actions */}
+            <div className="header-main-row max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5">
+              <div className="header-brand-row flex items-center justify-between gap-4 lg:gap-8">
+                {/* Brand Logo */}
+                <button
+                  onClick={() => {
+                    setBuyerExperience("landing")
+                    setCurrentRole("buyer")
+                    setSelectedCategory("All")
+                    window.scrollTo({ top: 0, behavior: "smooth" })
+                  }}
+                  className="header-brand text-left shrink-0 cursor-pointer group"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="brand-title text-xl sm:text-2xl font-bold font-serif tracking-tight text-[#241C15] group-hover:text-[#B7592F] transition-colors">
+                      SIMPLIFICANT
+                    </span>
+                    <span className="text-[10px] text-[#8C7E6D] font-light tracking-widest uppercase hidden sm:inline">
+                      Artisan Marketplace
+                    </span>
+                  </div>
+                </button>
+
+                {/* Return to Editorial Stories link (for buyers in catalog mode) */}
+                {currentRole === "buyer" && buyerExperience === "catalog" && (
+                  <button
+                    onClick={() => {
+                      setBuyerExperience("landing")
+                      window.scrollTo({ top: 0, behavior: "smooth" })
+                    }}
+                    className="hidden lg:flex items-center gap-1.5 text-xs font-medium text-[#6B6255] hover:text-[#241C15] px-3 py-1.5 rounded-full hover:bg-[#FAF7F2] border border-[#E4DAC8]/60 transition-colors cursor-pointer shrink-0"
+                  >
+                    <span>←</span>
+                    <span>Editorial Stories</span>
+                  </button>
+                )}
 
             {/* Global Big Search Bar (with Category Filter, 🎙️ Voice, 📷 Lens & Suggestions) */}
             <div
@@ -2012,6 +2132,22 @@ export default function App() {
         {/* ================================================================= */}
         {currentRole === "buyer" && (
           <div className="space-y-10">
+            {/* Top Back Navigation to Editorial Stories */}
+            <div className="flex items-center justify-between pb-3 border-b border-[#E4DAC8]">
+              <button
+                onClick={() => {
+                  setBuyerExperience("landing")
+                  window.scrollTo({ top: 0, behavior: "smooth" })
+                }}
+                className="inline-flex items-center gap-2 text-xs font-semibold text-[#241C15] hover:text-[#B7592F] transition-colors cursor-pointer"
+              >
+                <span>←</span>
+                <span>Back to Stories & Editorial Overview</span>
+              </button>
+              <span className="text-xs text-[#8C7E6D] font-light">
+                Complete Artisan Collection ({filteredProducts.length} crafts)
+              </span>
+            </div>
             {/* Hero Banner with Multi-Language Translation */}
             <div className="hero-banner relative rounded-3xl overflow-hidden border border-[#E4DAC8] bg-[#241C15] text-white shadow-md min-h-[360px] sm:min-h-[420px] flex items-center">
               <img
@@ -3150,6 +3286,8 @@ export default function App() {
           </div>
         </div>
       </footer>
+    </>
+  )}
 
       {/* ─── MODAL: CAMERA FEATURE 1 - BUYER AI PRICE SCANNER ──────────────── */}
       <CameraPriceScannerModal
@@ -3222,9 +3360,12 @@ export default function App() {
           })
           
           fetch("/api/v1/products?sortBy=newest")
-            .then((r) => r.json())
+            .then((r) => {
+              if (!r.ok) return null
+              return r.json()
+            })
             .then((data) => {
-              if (data && data.success && Array.isArray(data.data?.items)) {
+              if (data && data.success && Array.isArray(data.data?.items) && data.data.items.length > 0) {
                 const BACKEND_TO_FRONTEND_CATEGORY: Record<string, CraftCategory> = {
                   POTTERY: "Pottery", TEXTILE: "Textile", WOODWORK: "Woodwork", METALWARE: "Metalwork",
                   JEWELLERY: "Jewelry", CANE_BAMBOO: "Bamboo & Cane", STONEWORK: "Stone Craft",
@@ -3250,11 +3391,18 @@ export default function App() {
                     ...backendProducts,
                     ...prev.filter(p => !backendProducts.some((bp: any) => bp.id === p.id))
                   ]
-                  localStorage.setItem("simplificant_products_2026_handmade_v5", JSON.stringify(merged))
-                  return merged
+                  const seen = new Set<string | number>()
+                  const cleanMerged = merged.filter((p) => {
+                    if (seen.has(p.id)) return false
+                    seen.add(p.id)
+                    return true
+                  })
+                  localStorage.setItem("simplificant_products_2026_handmade_v5", JSON.stringify(cleanMerged))
+                  return cleanMerged
                 })
               }
             })
+            .catch(() => {})
 
           // Immediately switch to Buyer Marketplace
           setCurrentRole("buyer")
@@ -3400,6 +3548,12 @@ export default function App() {
         onLoginSuccess={(user, role) => {
           setCurrentUser(user)
           setCurrentRole(role)
+          setIsLoggedIn(true)
+          try {
+            localStorage.setItem("simplificant_is_logged_in", "true")
+          } catch {
+            // ignore
+          }
           setUniversalAuthModalOpen(false)
           showToast(`Signed in as ${user.name} (${role.toUpperCase()})`)
         }}
@@ -3407,6 +3561,7 @@ export default function App() {
         currentUser={currentUser}
         selectedLanguage={selectedLanguage}
         allUsers={activeUsers}
+        targetRoleHint={authTargetRoleHint}
       />
 
       {/* ─── MODAL: BUYER CUSTOMER SUPPORT CHAT ────────────────────────────── */}
