@@ -2,6 +2,7 @@ import React, { useState } from "react"
 import { User, Role, LanguageCode } from "../types"
 import { DEFAULT_USERS } from "../utils/mockData"
 import { translate } from "../utils/translations"
+import BuyerAuthModal from "./BuyerAuthModal"
 
 interface UniversalAuthModalProps {
   isOpen: boolean
@@ -107,6 +108,18 @@ export default function UniversalAuthModal({
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   if (!isOpen) return null
+
+  if (targetRoleHint === "buyer") {
+    return (
+      <BuyerAuthModal
+        isOpen={isOpen}
+        onClose={onClose}
+        onLoginSuccess={onLoginSuccess}
+        onRegisterUser={onRegisterUser}
+        allUsers={allUsers}
+      />
+    )
+  }
 
   // 1. Quick Select
   const handleQuickSelect = (user: User) => {

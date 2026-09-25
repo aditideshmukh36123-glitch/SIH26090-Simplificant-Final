@@ -72,6 +72,7 @@ export default function SellerCameraUploadModal({
   const [descriptionHi, setDescriptionHi] = useState("")
   const [craftTags, setCraftTags] = useState<string[]>([])
   const [sellingPrice, setSellingPrice] = useState<number>(0)
+  const [stockQuantity, setStockQuantity] = useState<number>(10)
   const [materialsList, setMaterialsList] = useState<string[]>([])
   const [highlightsList, setHighlightsList] = useState<string[]>([])
   
@@ -275,7 +276,7 @@ export default function SellerCameraUploadModal({
       category: FRONTEND_TO_BACKEND_CATEGORY[productCategory] || "OTHER",
       cleanImageUrl: enhancedImageUrl,
       tags: safeTags.map(t => t.trim()).filter(Boolean),
-      stockQuantity: 1, // Safe default
+      stockQuantity: Math.max(1, Number(stockQuantity) || 1),
       materials: highlightsList.length > 0 ? highlightsList : ["Not specified"]
     }
 
@@ -332,7 +333,7 @@ export default function SellerCameraUploadModal({
         tags: backendProduct.tags,
         gi_tagged: backendProduct.giTagged || true,
         materials: backendProduct.materials,
-        stockQuantity: backendProduct.stockQuantity
+        stockQuantity: Math.max(1, Number(backendProduct.stockQuantity) || Number(stockQuantity) || 1)
       }
 
       onProductPublished(mappedProduct)
@@ -571,24 +572,39 @@ export default function SellerCameraUploadModal({
                 )}
 
 
-                <div className="flex flex-col sm:flex-row gap-5 pt-2">
-                  <div className="flex-1 bg-[#FAF7F2] p-4 rounded-xl border border-[#E4DAC8]">
-                    <label className="text-xs font-bold text-[#6B6255] uppercase">Suggested Price (₹)</label>
-                    <div className="flex items-center mt-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                  <div className="bg-[#FAF7F2] p-4 rounded-xl border border-[#E4DAC8]">
+                    <label className="text-xs font-bold text-[#6B6255] uppercase block mb-1">Price (₹)</label>
+                    <div className="flex items-center">
                       <span className="text-2xl font-bold text-emerald-800 mr-2">₹</span>
-                      <input type="number" value={sellingPrice} onChange={e => setSellingPrice(Number(e.target.value))} className="w-full bg-transparent text-2xl font-bold text-emerald-800 outline-none border-b border-emerald-800/30 focus:border-emerald-800" />
+                      <input type="number" min="1" value={sellingPrice} onChange={e => setSellingPrice(Number(e.target.value))} className="w-full bg-transparent text-2xl font-bold text-emerald-800 outline-none border-b border-emerald-800/30 focus:border-emerald-800" />
                     </div>
                   </div>
-                  
-                  <div className="flex-1 flex flex-col justify-between">
-                    <div>
-                      <label className="text-xs font-bold text-[#6B6255] uppercase">Category</label>
-                      <input type="text" value={productCategory} readOnly className="w-full mt-1 p-2 border-b border-[#E4DAC8] text-sm outline-none bg-transparent" />
+
+                  <div className="bg-[#FAF7F2] p-4 rounded-xl border border-[#E4DAC8]">
+                    <label className="text-xs font-bold text-[#6B6255] uppercase block mb-1">Available Quantity (Stock)</label>
+                    <div className="flex items-center">
+                      <input 
+                        type="number" 
+                        min="1" 
+                        max="9999" 
+                        value={stockQuantity} 
+                        onChange={e => setStockQuantity(Math.max(1, Number(e.target.value)))} 
+                        className="w-full bg-transparent text-2xl font-bold text-[#241C15] outline-none border-b border-[#241C15]/30 focus:border-[#B7592F]" 
+                      />
+                      <span className="text-xs text-[#8C7E6D] font-medium ml-2 shrink-0">pieces</span>
                     </div>
-                    <div>
-                      <label className="text-xs font-bold text-[#6B6255] uppercase">Tags</label>
-                      <input type="text" value={craftTags.join(", ")} onChange={e => setCraftTags(e.target.value.split(",").map(t=>t.trim()))} className="w-full mt-1 p-2 border-b border-[#E4DAC8] text-sm outline-none focus:border-[#C9922E] bg-transparent" />
-                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                  <div>
+                    <label className="text-xs font-bold text-[#6B6255] uppercase">Category</label>
+                    <input type="text" value={productCategory} readOnly className="w-full mt-1 p-2 border-b border-[#E4DAC8] text-sm outline-none bg-transparent" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-[#6B6255] uppercase">Tags</label>
+                    <input type="text" value={craftTags.join(", ")} onChange={e => setCraftTags(e.target.value.split(",").map(t=>t.trim()))} className="w-full mt-1 p-2 border-b border-[#E4DAC8] text-sm outline-none focus:border-[#C9922E] bg-transparent" />
                   </div>
                 </div>
               </div>

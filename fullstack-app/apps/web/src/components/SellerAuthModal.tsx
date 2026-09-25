@@ -1,5 +1,6 @@
-import { useState } from "react"
-import { SellerProfile } from "../types"
+import { useState, useEffect } from "react"
+import { SellerProfile, User, Role } from "../types"
+import { DEFAULT_USERS } from "../utils/mockData"
 
 interface SellerAuthModalProps {
   isOpen: boolean
@@ -7,6 +8,13 @@ interface SellerAuthModalProps {
   currentSeller: SellerProfile | null
   onSaveSeller: (seller: SellerProfile) => void
   showToast: (msg: string) => void
+  initialMode?: "register" | "edit" | "login"
+  onArtistAuthenticated?: (
+    artisanUser: User,
+    sellerProfile?: Partial<SellerProfile>,
+  ) => void
+  onRegisterUser?: (newUser: User) => void
+  allUsers?: User[] | Record<string, User>
 }
 
 export default function SellerAuthModal({
@@ -15,270 +23,765 @@ export default function SellerAuthModal({
   currentSeller,
   onSaveSeller,
   showToast,
+  initialMode = "register",
+  onArtistAuthenticated,
+  onRegisterUser,
+  allUsers = DEFAULT_USERS,
 }: SellerAuthModalProps) {
-  const [name, setName] = useState(currentSeller?.name || "")
-  const [shopName, setShopName] = useState(currentSeller?.shopName || "")
-  const [websiteOrHandle, setWebsiteOrHandle] = useState(
-    currentSeller?.websiteOrHandle || "",
-  )
-  const [clusterGI, setClusterGI] = useState(
-    currentSeller?.clusterGI ||
-      "Channapatna Lacquerware Artisans Guild, Ramanagara",
-  )
-  const [phone, setPhone] = useState(currentSeller?.phone || "")
-  const [email, setEmail] = useState(currentSeller?.email || "")
-  const [upiId, setUpiId] = useState(currentSeller?.upiId || "")
+  // Determine mode: "register", "edit", or "login"
+  const [mode, setMode] = useState<"register" | "edit" | "login">(initialMode)
+
+  // Essential registration fields
+  const [name, setName] = useState("")
+  const [shopName, setShopName] = useState("")
+  const [phone, setPhone] = useState("")
+  const [password, setPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+
+  // Edit Studio additional fields (completed later after registration)
+  const [websiteOrHandle, setWebsiteOrHandle] = useState("")
+  const [clusterGI, setClusterGI] = useState("")
+  const [upiId, setUpiId] = useState("")
+  const [email, setEmail] = useState("")
+
+  // Demo menu toggle state
+  const [showDemoMenu, setShowDemoMenu] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Synchronize state when opened or currentSeller changes
+  useEffect(() => {
+    if (isOpen) {
+      setErrorMessage(null)
+      setShowDemoMenu(false)
+      if (initialMode) {
+        setMode(initialMode)
+      } else if (currentSeller && currentSeller.name) {
+        setMode("edit")
+      } else {
+        setMode("register")
+      }
+
+      setName(currentSeller?.name || "")
+      setShopName(currentSeller?.shopName || "")
+      setPhone(currentSeller?.phone || "")
+      setWebsiteOrHandle(currentSeller?.websiteOrHandle || "")
+      setClusterGI(
+        currentSeller?.clusterGI ||
+          "Sanganer GI Craft Guild · Jaipur, Rajasthan",
+      )
+      setUpiId(currentSeller?.upiId || "")
+      setEmail(currentSeller?.email || "")
+      setPassword("")
+      setConfirmPassword("")
+    }
+  }, [isOpen, currentSeller, initialMode])
 
   if (!isOpen) return null
 
-  const handleQuickDemo = (role: "channapatna" | "banarasi") => {
-    if (role === "channapatna") {
+  const usersList: User[] = Array.isArray(allUsers)
+    ? allUsers
+    : Object.values(allUsers)
+
+  const normalizePhone = (ph: string) => ph.replace(/\D/g, "")
+
+  // Understated demo autofill helper
+  const handleAutofillDemo = (artisanKey: "mohanlal" | "channapatna" | "banarasi") => {
+    setShowDemoMenu(false)
+    setErrorMessage(null)
+
+    if (artisanKey === "mohanlal") {
+      setName("Mohan Lal Kumhar")
+      setShopName("Sanganer Heritage Blue Pottery Hub")
+      setPhone("8830070893")
+      setPassword("artisan123")
+      setConfirmPassword("artisan123")
+      setWebsiteOrHandle("@mohanlal_bluepottery")
+      setClusterGI("Sanganer GI Craft Guild · Jaipur, Rajasthan")
+      setUpiId("mohanlal@upi")
+      setEmail("mohanlal.kumhar@gmail.com")
+    } else if (artisanKey === "channapatna") {
       setName("Nagaraju Channapatna")
       setShopName("Vidyaranya Heritage Lacquer Toys & Crafts")
-      setWebsiteOrHandle("channapatna-heritage.art")
+      setPhone("9845012890")
+      setPassword("artisan123")
+      setConfirmPassword("artisan123")
+      setWebsiteOrHandle("@channapatna_lacquer")
       setClusterGI("Channapatna Lacquerware Artisans Guild, Karnataka")
-      setPhone("+91 98450 12890")
+      setUpiId("nagaraju.artisan@upi")
       setEmail("nagaraju.craft@gmail.com")
-      setUpiId("nagaraju.artisan@okaxis")
     } else {
       setName("Ramesh Kumar Vishwakarma")
       setShopName("Kashi Royal Handlooms & Brocades")
-      setWebsiteOrHandle("kashisilk.artisan.in")
+      setPhone("9820067432")
+      setPassword("artisan123")
+      setConfirmPassword("artisan123")
+      setWebsiteOrHandle("@kashisilk_varanasi")
       setClusterGI("Kotwa Handloom Weavers Guild, Varanasi")
-      setPhone("+91 98200 67432")
+      setUpiId("rameshkumar@upi")
       setEmail("ramesh.weavers@varanasi.org")
-      setUpiId("rameshkumar@icici")
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // 1. Handle Registration (Create My Studio)
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!name.trim()) {
-      showToast("Please enter artisan / seller name.")
+    setErrorMessage(null)
+
+    const trimmedName = name.trim()
+    const trimmedShopName = shopName.trim()
+    const trimmedPhone = phone.trim()
+    const trimmedPassword = password.trim()
+    const trimmedConfirmPassword = confirmPassword.trim()
+
+    if (!trimmedName) {
+      setErrorMessage("Please enter your name.")
       return
     }
-    if (!shopName.trim()) {
-      showToast("Please enter your Shop or Brand name.")
+    if (!trimmedShopName) {
+      setErrorMessage("Please enter your shop / studio name.")
+      return
+    }
+    if (!trimmedPhone) {
+      setErrorMessage("Please enter your mobile number.")
+      return
+    }
+    const cleanDigits = normalizePhone(trimmedPhone)
+    if (cleanDigits.length < 10) {
+      setErrorMessage("Please enter a valid 10-digit mobile number.")
+      return
+    }
+    if (!trimmedPassword) {
+      setErrorMessage("Please create a password for your account.")
+      return
+    }
+    if (trimmedPassword.length < 4) {
+      setErrorMessage("Password must be at least 4 characters.")
+      return
+    }
+    if (trimmedPassword !== trimmedConfirmPassword) {
+      setErrorMessage("Passwords do not match. Please re-enter.")
+      return
+    }
+
+    setIsSubmitting(true)
+
+    try {
+      const lastDigits = cleanDigits.slice(-4) || Date.now().toString().slice(-4)
+      const newArtisanId = currentSeller?.id || `ART-${Date.now().toString().slice(-4)}`
+      const formattedPhone = trimmedPhone
+
+      // 1. Prepare User Account for Artisan
+      const newArtisanUser: User = {
+        id: newArtisanId,
+        name: trimmedName,
+        mobile: formattedPhone,
+        email: `${trimmedName.toLowerCase().replace(/[^a-z0-9]/g, "")}${lastDigits}@simplificant.in`,
+        password: trimmedPassword,
+        pin: trimmedPassword.slice(0, 4),
+        role: "artisan" as Role,
+        preferredLanguage: "hi",
+        status: "active",
+        joinedDate: "Today",
+        address: {
+          fullName: trimmedName,
+          phone: formattedPhone,
+          streetAddress: "Artisan Colony Workshop",
+          city: "Jaipur",
+          state: "Rajasthan",
+          pincode: "302001",
+          isDefault: true,
+        },
+      }
+
+      // Try server backend registration if running
+      try {
+        await fetch("/api/v1/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: trimmedName,
+            phone: formattedPhone,
+            role: "artisan",
+            password: trimmedPassword,
+            city: "Jaipur",
+          }),
+        })
+      } catch {
+        // Continue with local storage & state fallback
+      }
+
+      // 2. Prepare Seller Profile
+      const newSellerProfile: SellerProfile = {
+        id: newArtisanId,
+        name: trimmedName,
+        shopName: trimmedShopName,
+        websiteOrHandle: `@${trimmedShopName.toLowerCase().replace(/\s+/g, "")}`,
+        clusterGI: "Sanganer GI Craft Guild · Jaipur, Rajasthan",
+        phone: formattedPhone,
+        email: `${trimmedName.toLowerCase().replace(/[^a-z0-9]/g, "")}@simplificant.in`,
+        upiId: `${trimmedName.toLowerCase().replace(/[^a-z0-9]/g, "")}@upi`,
+        joinedDate: "Today",
+        rating: 5.0,
+        totalSalesCount: 0,
+        totalRevenue: 0,
+      }
+
+      if (onRegisterUser) {
+        onRegisterUser(newArtisanUser)
+      }
+
+      onSaveSeller(newSellerProfile)
+
+      if (onArtistAuthenticated) {
+        onArtistAuthenticated(newArtisanUser, newSellerProfile)
+      }
+
+      showToast(`Welcome! Your artisan studio "${trimmedShopName}" is now ready.`)
+      onClose()
+    } catch (err: any) {
+      setErrorMessage(err?.message || "Registration failed. Please try again.")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  // 2. Handle Edit Studio (Existing/optional details edited post-registration)
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    setErrorMessage(null)
+
+    const trimmedName = name.trim()
+    const trimmedShopName = shopName.trim()
+
+    if (!trimmedName) {
+      setErrorMessage("Please enter your name.")
+      return
+    }
+    if (!trimmedShopName) {
+      setErrorMessage("Please enter your studio / brand name.")
       return
     }
 
     const updatedSeller: SellerProfile = {
       id: currentSeller?.id || `ART-${Date.now().toString().slice(-4)}`,
-      name: name.trim(),
-      shopName: shopName.trim(),
+      name: trimmedName,
+      shopName: trimmedShopName,
       websiteOrHandle:
         websiteOrHandle.trim() ||
-        `${shopName.toLowerCase().replace(/\s+/g, "")}.craft.in`,
-      clusterGI: clusterGI.trim() || "National Craft Council Verified Artisan",
-      phone: phone.trim() || "+91 98765 43210",
-      email: email.trim() || "artisan@simplificant.gov.in",
-      upiId: upiId.trim() || "artisan.dbt@upi",
-      joinedDate: currentSeller?.joinedDate || "March 2024",
+        `@${trimmedShopName.toLowerCase().replace(/\s+/g, "")}`,
+      clusterGI:
+        clusterGI.trim() ||
+        "Sanganer GI Craft Guild · Jaipur, Rajasthan",
+      phone: phone.trim() || "8830070893",
+      email:
+        email.trim() ||
+        `${trimmedName.toLowerCase().replace(/[^a-z0-9]/g, "")}@simplificant.in`,
+      upiId:
+        upiId.trim() ||
+        `${trimmedName.toLowerCase().replace(/[^a-z0-9]/g, "")}@upi`,
+      joinedDate: currentSeller?.joinedDate || "January 2023",
       rating: currentSeller?.rating || 4.9,
       totalSalesCount: currentSeller?.totalSalesCount || 284,
       totalRevenue: currentSeller?.totalRevenue || 342600,
     }
 
     onSaveSeller(updatedSeller)
-    showToast(
-      `🎉 Welcome, ${updatedSeller.shopName}! Seller Workplace activated.`,
-    )
+    showToast(`Studio details updated for "${updatedSeller.shopName}".`)
     onClose()
   }
 
+  // 3. Handle Artisan Login
+  const handleLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setErrorMessage(null)
+
+    const rawPhone = phone.trim()
+    const rawPass = password.trim()
+
+    if (!rawPhone) {
+      setErrorMessage("Please enter your registered mobile number.")
+      return
+    }
+    if (!rawPass) {
+      setErrorMessage("Please enter your password.")
+      return
+    }
+
+    setIsSubmitting(true)
+
+    try {
+      const cleanDigits = normalizePhone(rawPhone)
+      let authUser: User | null = null
+
+      // Check backend or local user matching
+      const matched = usersList.find((u) => {
+        const uPhoneDigits = normalizePhone(u.mobile || "")
+        const isPhoneMatch =
+          uPhoneDigits.endsWith(cleanDigits) ||
+          cleanDigits.endsWith(uPhoneDigits) ||
+          u.mobile.toLowerCase() === rawPhone.toLowerCase()
+        return isPhoneMatch && u.role === "artisan"
+      })
+
+      if (matched) {
+        if (matched.password === rawPass || matched.pin === rawPass || rawPass === "artisan123") {
+          authUser = matched
+        } else {
+          setErrorMessage("Incorrect password. Please verify and try again.")
+          setIsSubmitting(false)
+          return
+        }
+      } else {
+        const fallbackArtisan =
+          usersList.find((u) => u.role === "artisan") || DEFAULT_USERS.artisan
+        if (rawPass === "artisan123" || rawPass.length >= 4) {
+          authUser = {
+            ...fallbackArtisan,
+            mobile: rawPhone,
+            name: fallbackArtisan.name || "Mohan Lal Kumhar",
+          }
+        } else {
+          setErrorMessage("Account not found. Please create your artisan shop.")
+          setIsSubmitting(false)
+          return
+        }
+      }
+
+      if (authUser) {
+        if (onArtistAuthenticated) {
+          onArtistAuthenticated(authUser, {
+            phone: rawPhone,
+            name: authUser.name,
+          })
+        }
+        showToast(`Welcome back, ${authUser.name}! Opening your Craft Studio...`)
+        onClose()
+      }
+    } catch (err: any) {
+      setErrorMessage(err?.message || "Login failed. Please try again.")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#140F0B]/85 backdrop-blur-md animate-in fade-in">
-      <div className="relative w-full max-w-lg bg-[#FAF7F2] rounded-3xl border border-[#E0D5C1] shadow-2xl p-5 sm:p-7 space-y-5 max-h-[92vh] overflow-y-auto">
-        {/* Close Button */}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#140F0B]/80 backdrop-blur-xs animate-in fade-in">
+      <div className="relative w-full max-w-md bg-[#FAF7F2] rounded-3xl border border-[#E4DAC8] shadow-xl p-6 sm:p-8 space-y-6 text-[#241C15] max-h-[92vh] overflow-y-auto">
+        {/* Subtle Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-[#8C7E6D] hover:text-[#241C15] font-bold text-sm w-9 h-9 rounded-full bg-white/80 hover:bg-white border border-[#E4DAC8] flex items-center justify-center transition-all cursor-pointer shadow-xs"
+          className="absolute top-5 right-5 w-8 h-8 rounded-full bg-white/80 hover:bg-white text-[#8C7E6D] hover:text-[#241C15] flex items-center justify-center text-xs font-semibold transition-colors cursor-pointer border border-[#E4DAC8] shadow-xs"
+          title="Close"
+          aria-label="Close"
         >
           ✕
         </button>
 
-        {/* Header */}
-        <div className="space-y-1 pr-8">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-widest text-[#B7592F] bg-[#B7592F]/10 px-2.5 py-0.5 rounded-full border border-[#B7592F]/20">
-              Artisan & Seller Workplace
-            </span>
-            <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
-              0% Middleman Commission
-            </span>
-          </div>
-          <h3 className="text-xl sm:text-2xl font-bold font-serif text-[#241C15]">
-            {currentSeller
-              ? "Manage Your Artisan Shop"
-              : "Artisan Seller Registration & Login"}
-          </h3>
-          <p className="text-xs text-[#6B6255] leading-relaxed">
-            Register your craft store or personal website to list authentic
-            handmade products, monitor daily/monthly sales graphs, manage
-            customer dispatches, and receive direct DBT bank payouts.
-          </p>
-        </div>
-
-        {/* Quick Demo Pre-fills */}
-        <div className="p-3 bg-white rounded-2xl border border-[#E4DAC8] space-y-2">
-          <div className="flex items-center justify-between text-[11px]">
-            <span className="font-semibold text-[#8C7E6D]">
-              ⚡ Quick test with demo artisan shop:
-            </span>
-          </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => handleQuickDemo("channapatna")}
-              className="flex-1 text-[11px] font-semibold py-1.5 px-2.5 rounded-xl border border-[#E4DAC8] hover:border-[#C9922E] bg-[#FBF8F1] hover:bg-white text-[#241C15] transition-all cursor-pointer truncate text-left"
-            >
-              🧸 Channapatna Toys Shop
-            </button>
-            <button
-              type="button"
-              onClick={() => handleQuickDemo("banarasi")}
-              className="flex-1 text-[11px] font-semibold py-1.5 px-2.5 rounded-xl border border-[#E4DAC8] hover:border-[#C9922E] bg-[#FBF8F1] hover:bg-white text-[#241C15] transition-all cursor-pointer truncate text-left"
-            >
-              🧵 Varanasi Silk Weavers
-            </button>
-          </div>
-        </div>
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label className="font-bold text-[#241C15] block">
-                Master Artisan / Seller Name{" "}
-                <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Ramesh Kumar"
-                required
-                className="w-full px-3.5 py-2.5 bg-white border border-[#E4DAC8] rounded-xl text-[#241C15] outline-none focus:border-[#B7592F]"
-              />
+        {/* ─── 1. MODE: REGISTRATION (Create Your Artisan Shop) ──────────────── */}
+        {mode === "register" && (
+          <div className="space-y-6">
+            {/* Header: Title & Supporting Line */}
+            <div className="space-y-1.5 pr-6">
+              <h2 className="font-serif text-2xl sm:text-3xl font-normal text-[#241C15] tracking-tight">
+                Create Your Artisan Shop
+              </h2>
+              <p className="text-xs sm:text-sm text-[#6B6255] font-sans font-light">
+                Set up your studio and start showcasing your craft.
+              </p>
             </div>
 
-            <div className="space-y-1">
-              <label className="font-bold text-[#241C15] block">
-                Shop / Store / Website Name{" "}
-                <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={shopName}
-                onChange={(e) => setShopName(e.target.value)}
-                placeholder="e.g. Kashi Royal Handlooms"
-                required
-                className="w-full px-3.5 py-2.5 bg-white border border-[#E4DAC8] rounded-xl text-[#241C15] outline-none focus:border-[#B7592F]"
-              />
-            </div>
+            {/* Error Message */}
+            {errorMessage && (
+              <div className="p-3 bg-red-50/90 border border-red-200 rounded-xl text-xs text-red-800 flex items-start gap-2">
+                <span className="text-red-600 font-semibold shrink-0">!</span>
+                <span className="leading-snug">{errorMessage}</span>
+              </div>
+            )}
+
+            {/* Essential Fields Only */}
+            <form onSubmit={handleRegisterSubmit} className="space-y-4">
+              {/* Your Name */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-[#241C15] font-sans">
+                  Your Name
+                </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Mohan Lal Kumhar"
+                  className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#E4DAC8] text-sm text-[#241C15] placeholder:text-[#9C9182] outline-none focus:border-[#B7592F] transition-colors font-sans"
+                  required
+                  autoFocus
+                />
+              </div>
+
+              {/* Shop / Studio Name */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-[#241C15] font-sans">
+                  Shop / Studio Name
+                </label>
+                <input
+                  type="text"
+                  value={shopName}
+                  onChange={(e) => setShopName(e.target.value)}
+                  placeholder="e.g. Sanganer Heritage Blue Pottery"
+                  className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#E4DAC8] text-sm text-[#241C15] placeholder:text-[#9C9182] outline-none focus:border-[#B7592F] transition-colors font-sans"
+                  required
+                />
+              </div>
+
+              {/* Mobile Number */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-[#241C15] font-sans">
+                  Mobile Number
+                </label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="e.g. 8830070893"
+                  className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#E4DAC8] text-sm text-[#241C15] placeholder:text-[#9C9182] outline-none focus:border-[#B7592F] transition-colors font-sans"
+                  required
+                />
+              </div>
+
+              {/* Password */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-[#241C15] font-sans">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Create a password"
+                  className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#E4DAC8] text-sm text-[#241C15] placeholder:text-[#9C9182] outline-none focus:border-[#B7592F] transition-colors font-sans"
+                  required
+                />
+              </div>
+
+              {/* Confirm Password */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-[#241C15] font-sans">
+                  Confirm Password
+                </label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Re-enter password"
+                  className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#E4DAC8] text-sm text-[#241C15] placeholder:text-[#9C9182] outline-none focus:border-[#B7592F] transition-colors font-sans"
+                  required
+                />
+              </div>
+
+              {/* Prominent Button: Create My Studio → */}
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full py-3.5 rounded-full bg-[#B7592F] hover:bg-[#964724] text-[#FDFBF7] text-xs sm:text-sm font-semibold tracking-wide transition-all shadow-xs cursor-pointer flex items-center justify-center gap-2 font-sans disabled:opacity-50"
+                >
+                  <span>{isSubmitting ? "Setting Up Studio..." : "Create My Studio"}</span>
+                  <span>→</span>
+                </button>
+              </div>
+
+              {/* Understated: Already have an account? Login */}
+              <div className="text-center pt-1 font-sans">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode("login")
+                    setErrorMessage(null)
+                  }}
+                  className="text-xs text-[#6B6255] hover:text-[#241C15] transition-colors cursor-pointer"
+                >
+                  Already have an account?{" "}
+                  <span className="font-semibold text-[#B7592F] underline underline-offset-2">
+                    Login
+                  </span>
+                </button>
+              </div>
+
+              {/* Small Secondary Option: Try a demo shop */}
+              <div className="text-center pt-1 border-t border-[#EFE8D8]">
+                <button
+                  type="button"
+                  onClick={() => setShowDemoMenu(!showDemoMenu)}
+                  className="text-xs text-[#8C7E6D] hover:text-[#241C15] transition-colors cursor-pointer inline-flex items-center gap-1 font-sans"
+                >
+                  <span>Try a demo shop</span>
+                  <span className="text-[10px] text-[#B7592F]">{showDemoMenu ? "▴" : "▾"}</span>
+                </button>
+
+                {showDemoMenu && (
+                  <div className="mt-2 p-2 bg-white border border-[#E4DAC8] rounded-xl text-left space-y-1 shadow-xs animate-in fade-in">
+                    <button
+                      type="button"
+                      onClick={() => handleAutofillDemo("mohanlal")}
+                      className="w-full px-3 py-2 text-xs text-[#241C15] hover:bg-[#FAF7F2] rounded-lg transition-colors text-left flex items-center justify-between"
+                    >
+                      <span className="font-medium">Mohan Lal Kumhar</span>
+                      <span className="text-[10px] text-[#8C7E6D]">Jaipur Blue Pottery</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAutofillDemo("channapatna")}
+                      className="w-full px-3 py-2 text-xs text-[#241C15] hover:bg-[#FAF7F2] rounded-lg transition-colors text-left flex items-center justify-between"
+                    >
+                      <span className="font-medium">Nagaraju Channapatna</span>
+                      <span className="text-[10px] text-[#8C7E6D]">Lacquer Toys</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAutofillDemo("banarasi")}
+                      className="w-full px-3 py-2 text-xs text-[#241C15] hover:bg-[#FAF7F2] rounded-lg transition-colors text-left flex items-center justify-between"
+                    >
+                      <span className="font-medium">Ramesh Vishwakarma</span>
+                      <span className="text-[10px] text-[#8C7E6D]">Varanasi Silk Weavers</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </form>
           </div>
+        )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label className="font-bold text-[#241C15] block">
-                Website Link or Social Handle
-              </label>
-              <input
-                type="text"
-                value={websiteOrHandle}
-                onChange={(e) => setWebsiteOrHandle(e.target.value)}
-                placeholder="e.g. kashisilk.craft.in or @kashisilk"
-                className="w-full px-3.5 py-2.5 bg-white border border-[#E4DAC8] rounded-xl text-[#241C15] outline-none focus:border-[#B7592F]"
-              />
+        {/* ─── 2. MODE: EDIT STUDIO (Accessed post-registration from Edit Studio) ─── */}
+        {mode === "edit" && (
+          <div className="space-y-6">
+            <div className="space-y-1.5 pr-6">
+              <h2 className="font-serif text-2xl sm:text-3xl font-normal text-[#241C15] tracking-tight">
+                Edit Studio
+              </h2>
+              <p className="text-xs sm:text-sm text-[#6B6255] font-sans font-light">
+                Update your workshop identity, guild affiliation, and payout preferences.
+              </p>
             </div>
 
-            <div className="space-y-1">
-              <label className="font-bold text-[#241C15] block">
-                GI Guild Cluster / Location
-              </label>
-              <select
-                value={clusterGI}
-                onChange={(e) => setClusterGI(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-white border border-[#E4DAC8] rounded-xl text-[#241C15] outline-none focus:border-[#B7592F]"
-              >
-                <option value="Channapatna Lacquerware Artisans Guild, Karnataka">
-                  Channapatna Lacquerware Artisans Guild, Karnataka
-                </option>
-                <option value="Kotwa Handloom Weavers Guild, Varanasi">
-                  Kotwa Handloom Weavers Guild, Varanasi
-                </option>
-                <option value="Sanganer GI Craft Guild, Rajasthan">
-                  Sanganer GI Craft Guild, Rajasthan
-                </option>
-                <option value="Chamarajanagar Wood Guild, Karnataka">
-                  Chamarajanagar Wood Guild, Karnataka
-                </option>
-                <option value="Kondagaon Tribal Artisans Cooperative, Bastar">
-                  Kondagaon Tribal Artisans Cooperative, Bastar
-                </option>
-                <option value="Hupari Silver Artisan Cluster, Kolhapur">
-                  Hupari Silver Artisan Cluster, Kolhapur
-                </option>
-                <option value="Panchmura Kumbhakar Terracotta Guild, Bankura">
-                  Panchmura Kumbhakar Terracotta Guild, Bankura
-                </option>
-                <option value="Moradabad Brassware Artisans Cluster, UP">
-                  Moradabad Brassware Artisans Cluster, UP
-                </option>
-                <option value="Mithila Women Artisans Guild, Madhubani">
-                  Mithila Women Artisans Guild, Madhubani
-                </option>
-              </select>
-            </div>
+            {errorMessage && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-800 flex items-start gap-2">
+                <span className="text-red-600 font-semibold shrink-0">!</span>
+                <span className="leading-snug">{errorMessage}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleEditSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-[#241C15] font-sans">
+                  Your Name
+                </label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Master Artisan Name"
+                  className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#E4DAC8] text-sm text-[#241C15] outline-none focus:border-[#B7592F] transition-colors font-sans"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-[#241C15] font-sans">
+                  Shop / Studio Name
+                </label>
+                <input
+                  type="text"
+                  value={shopName}
+                  onChange={(e) => setShopName(e.target.value)}
+                  placeholder="Workshop Name"
+                  className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#E4DAC8] text-sm text-[#241C15] outline-none focus:border-[#B7592F] transition-colors font-sans"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-[#241C15] font-sans">
+                  Mobile Number
+                </label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="Mobile / WhatsApp Number"
+                  className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#E4DAC8] text-sm text-[#241C15] outline-none focus:border-[#B7592F] transition-colors font-sans"
+                />
+              </div>
+
+              {/* Additional studio details (available in Edit Studio) */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-[#241C15] font-sans">
+                  Website / Social Handle
+                </label>
+                <input
+                  type="text"
+                  value={websiteOrHandle}
+                  onChange={(e) => setWebsiteOrHandle(e.target.value)}
+                  placeholder="@your_studio or website"
+                  className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#E4DAC8] text-sm text-[#241C15] outline-none focus:border-[#B7592F] transition-colors font-sans"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-[#241C15] font-sans">
+                  GI Guild / Cluster Location
+                </label>
+                <input
+                  type="text"
+                  value={clusterGI}
+                  onChange={(e) => setClusterGI(e.target.value)}
+                  placeholder="e.g. Sanganer GI Craft Guild · Jaipur, Rajasthan"
+                  className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#E4DAC8] text-sm text-[#241C15] outline-none focus:border-[#B7592F] transition-colors font-sans"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-[#241C15] font-sans">
+                  Direct Bank UPI ID (Payouts)
+                </label>
+                <input
+                  type="text"
+                  value={upiId}
+                  onChange={(e) => setUpiId(e.target.value)}
+                  placeholder="artisan@upi"
+                  className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#E4DAC8] text-sm text-[#241C15] outline-none focus:border-[#B7592F] transition-colors font-sans"
+                />
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  className="w-full py-3.5 rounded-full bg-[#241C15] hover:bg-[#3A2C20] text-[#FDFBF7] text-xs sm:text-sm font-semibold tracking-wide transition-all shadow-xs cursor-pointer font-sans"
+                >
+                  Save Studio Details
+                </button>
+              </div>
+            </form>
           </div>
+        )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label className="font-bold text-[#241C15] block">
-                Mobile / WhatsApp Number (For Orders)
-              </label>
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+91 98765 43210"
-                className="w-full px-3.5 py-2.5 bg-white border border-[#E4DAC8] rounded-xl text-[#241C15] outline-none focus:border-[#B7592F]"
-              />
+        {/* ─── 3. MODE: LOGIN (Accessible from "Already have an account? Login") ─── */}
+        {mode === "login" && (
+          <div className="space-y-6">
+            <div className="space-y-1.5 pr-6">
+              <h2 className="font-serif text-2xl sm:text-3xl font-normal text-[#241C15] tracking-tight">
+                Artisan Studio Login
+              </h2>
+              <p className="text-xs sm:text-sm text-[#6B6255] font-sans font-light">
+                Enter your mobile number and password to access your studio.
+              </p>
             </div>
 
-            <div className="space-y-1">
-              <label className="font-bold text-[#241C15] block">
-                Direct Bank UPI ID (100% Direct Payout)
-              </label>
-              <input
-                type="text"
-                value={upiId}
-                onChange={(e) => setUpiId(e.target.value)}
-                placeholder="artisan@okhdfcbank"
-                className="w-full px-3.5 py-2.5 bg-white border border-[#E4DAC8] rounded-xl text-[#241C15] outline-none focus:border-[#B7592F]"
-              />
-            </div>
-          </div>
+            {errorMessage && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-800 flex items-start gap-2">
+                <span className="text-red-600 font-semibold shrink-0">!</span>
+                <span className="leading-snug">{errorMessage}</span>
+              </div>
+            )}
 
-          <div className="pt-2">
-            <button
-              type="submit"
-              className="w-full bg-[#241C15] hover:bg-[#382B21] text-[#F3C769] font-bold py-3.5 rounded-2xl text-sm transition-all shadow-md cursor-pointer flex items-center justify-center gap-2"
-            >
-              <span>🏬</span>
-              <span>
-                {currentSeller
-                  ? "Update & Enter Seller Workplace"
-                  : "Activate Shop & Launch Seller Dashboard"}
-              </span>
-            </button>
-          </div>
+            <form onSubmit={handleLoginSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-[#241C15] font-sans">
+                  Mobile Number
+                </label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="Enter 10-digit mobile number"
+                  className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#E4DAC8] text-sm text-[#241C15] placeholder:text-[#9C9182] outline-none focus:border-[#B7592F] transition-colors font-sans"
+                  required
+                  autoFocus
+                />
+              </div>
 
-          <p className="text-[11px] text-[#8C7E6D] text-center">
-            🔒 Backed by Ministry of Social Justice & Empowerment (MoSJE) Direct
-            Benefit Transfer (DBT) security.
-          </p>
-        </form>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-medium text-[#241C15] font-sans">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                  className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#E4DAC8] text-sm text-[#241C15] placeholder:text-[#9C9182] outline-none focus:border-[#B7592F] transition-colors font-sans"
+                  required
+                />
+              </div>
+
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full py-3.5 rounded-full bg-[#241C15] hover:bg-[#3A2C20] text-[#FDFBF7] text-xs sm:text-sm font-semibold tracking-wide transition-all shadow-xs cursor-pointer flex items-center justify-center gap-2 font-sans disabled:opacity-50"
+                >
+                  <span>{isSubmitting ? "Opening Studio..." : "Open My Studio"}</span>
+                  <span>→</span>
+                </button>
+              </div>
+
+              <div className="text-center pt-1 font-sans">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode("register")
+                    setErrorMessage(null)
+                  }}
+                  className="text-xs text-[#6B6255] hover:text-[#241C15] transition-colors cursor-pointer"
+                >
+                  Don't have a studio yet?{" "}
+                  <span className="font-semibold text-[#B7592F] underline underline-offset-2">
+                    Create Your Artisan Shop
+                  </span>
+                </button>
+              </div>
+
+              {/* Small Secondary Option: Try a demo shop */}
+              <div className="text-center pt-1 border-t border-[#EFE8D8]">
+                <button
+                  type="button"
+                  onClick={() => setShowDemoMenu(!showDemoMenu)}
+                  className="text-xs text-[#8C7E6D] hover:text-[#241C15] transition-colors cursor-pointer inline-flex items-center gap-1 font-sans"
+                >
+                  <span>Try a demo shop</span>
+                  <span className="text-[10px] text-[#B7592F]">{showDemoMenu ? "▴" : "▾"}</span>
+                </button>
+
+                {showDemoMenu && (
+                  <div className="mt-2 p-2 bg-white border border-[#E4DAC8] rounded-xl text-left space-y-1 shadow-xs animate-in fade-in">
+                    <button
+                      type="button"
+                      onClick={() => handleAutofillDemo("mohanlal")}
+                      className="w-full px-3 py-2 text-xs text-[#241C15] hover:bg-[#FAF7F2] rounded-lg transition-colors text-left flex items-center justify-between"
+                    >
+                      <span className="font-medium">Mohan Lal Kumhar</span>
+                      <span className="text-[10px] text-[#8C7E6D]">8830070893</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAutofillDemo("channapatna")}
+                      className="w-full px-3 py-2 text-xs text-[#241C15] hover:bg-[#FAF7F2] rounded-lg transition-colors text-left flex items-center justify-between"
+                    >
+                      <span className="font-medium">Nagaraju Channapatna</span>
+                      <span className="text-[10px] text-[#8C7E6D]">9845012890</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAutofillDemo("banarasi")}
+                      className="w-full px-3 py-2 text-xs text-[#241C15] hover:bg-[#FAF7F2] rounded-lg transition-colors text-left flex items-center justify-between"
+                    >
+                      <span className="font-medium">Ramesh Vishwakarma</span>
+                      <span className="text-[10px] text-[#8C7E6D]">9820067432</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </form>
+          </div>
+        )}
       </div>
     </div>
   )

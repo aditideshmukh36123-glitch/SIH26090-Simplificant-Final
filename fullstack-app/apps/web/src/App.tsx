@@ -16,6 +16,8 @@ import BuyerSupportChatModal from "./components/BuyerSupportChatModal"
 import NotificationPanel from "./components/NotificationPanel"
 import AddCraftOrMaterialModal from "./components/AddCraftOrMaterialModal"
 import UniversalAuthModal from "./components/UniversalAuthModal"
+import ArtistAuthModal from "./components/ArtistAuthModal"
+import BuyerAuthModal from "./components/BuyerAuthModal"
 import EditorialLandingPage from "./components/EditorialLandingPage"
 
 import {
@@ -292,7 +294,7 @@ export default function App() {
     }
   })
   const [userDropdownOpen, setUserDropdownOpen] = useState(false)
-  const [buyerExperience, setBuyerExperience] = useState<"landing" | "catalog">("landing")
+  const [buyerExperience, setBuyerExperience] = useState<"landing" | "catalog">("catalog")
   const [authTargetRoleHint, setAuthTargetRoleHint] = useState<Role | null>(null)
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
     try {
@@ -365,6 +367,10 @@ export default function App() {
   const [sortBy, setSortBy] =
     useState<"featured" | "price-asc" | "price-desc" | "b2b-price">("featured")
   const [addCraftModalOpen, setAddCraftModalOpen] = useState(false)
+  const [artisanHeaderMenuOpen, setArtisanHeaderMenuOpen] = useState(false)
+  const [artisanStudioActiveTab, setArtisanStudioActiveTab] = useState<"studio" | "crafts" | "orders">("studio")
+  const [headerSearchExpanded, setHeaderSearchExpanded] = useState(false)
+  const artisanMenuRef = useRef<HTMLDivElement>(null)
   const [isSearchFocused, setIsSearchFocused] = useState(false)
   const [isMobileSearchFocused, setIsMobileSearchFocused] = useState(false)
   const [isHeroSearchFocused, setIsHeroSearchFocused] = useState(false)
@@ -374,6 +380,12 @@ export default function App() {
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
+      if (
+        artisanMenuRef.current &&
+        !artisanMenuRef.current.contains(event.target as Node)
+      ) {
+        setArtisanHeaderMenuOpen(false)
+      }
       if (
         headerSearchRef.current &&
         !headerSearchRef.current.contains(event.target as Node)
@@ -470,7 +482,11 @@ export default function App() {
   const [trackingLookupOrderId, setTrackingLookupOrderId] =
     useState<string | null>(null)
   const [sellerAuthModalOpen, setSellerAuthModalOpen] = useState(false)
+  const [sellerAuthModalMode, setSellerAuthModalMode] =
+    useState<"register" | "edit" | "login">("register")
   const [universalAuthModalOpen, setUniversalAuthModalOpen] = useState(false)
+  const [artistAuthModalOpen, setArtistAuthModalOpen] = useState(false)
+  const [buyerAuthModalOpen, setBuyerAuthModalOpen] = useState(false)
 
   // ─── SUPER ADMIN GLOBAL CONTROLS & PLATFORM SETTINGS ───────────────────────
   const [announcementText, setAnnouncementText] = useState(
@@ -1189,16 +1205,13 @@ export default function App() {
           }}
           onOpenCart={() => setCartOpen(true)}
           onOpenLogin={() => {
-            setAuthTargetRoleHint(null)
-            setUniversalAuthModalOpen(true)
+            setBuyerAuthModalOpen(true)
           }}
           onOpenBuyerLogin={() => {
-            setAuthTargetRoleHint("buyer")
-            setUniversalAuthModalOpen(true)
+            setBuyerAuthModalOpen(true)
           }}
           onOpenArtistLogin={() => {
-            setAuthTargetRoleHint("artisan")
-            setUniversalAuthModalOpen(true)
+            setArtistAuthModalOpen(true)
           }}
           onOpenWishlist={() => {
             setBuyerExperience("catalog")
@@ -1253,860 +1266,502 @@ export default function App() {
           )}
 
           {/* ─── APP HEADER ───────────────────────────────────────────────────── */}
-          <header className="sticky top-0 z-40 bg-[#FDFBF7]/95 backdrop-blur-md border-b border-[#E4DAC8]">
-            {/* Row 1: Brand, Search, Camera AI Price Scanner, Role Selector & Actions */}
-            <div className="header-main-row max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5">
-              <div className="header-brand-row flex items-center justify-between gap-4 lg:gap-8">
-                {/* Brand Logo */}
-                <button
-                  onClick={() => {
-                    setBuyerExperience("landing")
-                    setCurrentRole("buyer")
-                    setSelectedCategory("All")
-                    window.scrollTo({ top: 0, behavior: "smooth" })
-                  }}
-                  className="header-brand text-left shrink-0 cursor-pointer group"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="brand-title text-xl sm:text-2xl font-bold font-serif tracking-tight text-[#241C15] group-hover:text-[#B7592F] transition-colors">
-                      SIMPLIFICANT
-                    </span>
-                    <span className="text-[10px] text-[#8C7E6D] font-light tracking-widest uppercase hidden sm:inline">
-                      Artisan Marketplace
-                    </span>
-                  </div>
-                </button>
-
-                {/* Return to Editorial Stories link (for buyers in catalog mode) */}
-                {currentRole === "buyer" && buyerExperience === "catalog" && (
+          <header className="sticky top-0 z-40 bg-[#FDFBF7] border-b border-[#E4DAC8]">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex items-center justify-between h-16 sm:h-18 gap-4">
+                {/* LEFT: SIMPLIFICANT */}
+                <div className="flex items-center shrink-0">
                   <button
                     onClick={() => {
                       setBuyerExperience("landing")
+                      setCurrentRole("buyer")
+                      setSelectedCategory("All")
                       window.scrollTo({ top: 0, behavior: "smooth" })
                     }}
-                    className="hidden lg:flex items-center gap-1.5 text-xs font-medium text-[#6B6255] hover:text-[#241C15] px-3 py-1.5 rounded-full hover:bg-[#FAF7F2] border border-[#E4DAC8]/60 transition-colors cursor-pointer shrink-0"
+                    className="text-left cursor-pointer group"
                   >
-                    <span>←</span>
-                    <span>Editorial Stories</span>
+                    <span className="font-serif text-xl sm:text-2xl font-normal text-[#241C15] tracking-[0.06em] group-hover:text-[#B7592F] transition-colors">
+                      SIMPLIFICANT
+                    </span>
                   </button>
-                )}
+                </div>
 
-            {/* Global Big Search Bar (with Category Filter, 🎙️ Voice, 📷 Lens & Suggestions) */}
-            <div
-              ref={headerSearchRef}
-              className="header-desktop-search flex-1 max-w-2xl hidden md:block relative z-30"
-            >
-              <div className="relative flex items-center bg-white rounded-2xl border-2 border-[#E4DAC8] focus-within:border-[#B7592F] focus-within:ring-4 focus-within:ring-[#B7592F]/10 shadow-xs transition-all">
-                {/* Category Dropdown Selector */}
-                <div className="relative shrink-0 border-r border-[#E4DAC8] hidden lg:block">
-                  <select
-                    value={selectedCategory}
-                    onChange={(e) => {
-                      setSelectedCategory(e.target.value)
-                      handlePerformSearch(searchQuery, e.target.value)
+                {/* CENTER: Discover · Crafts · Stories */}
+                <nav className="flex items-center gap-3 sm:gap-6 text-xs sm:text-[13px] font-medium tracking-wide text-[#5B5750]">
+                  <button
+                    onClick={() => {
+                      setBuyerExperience("landing")
+                      setCurrentRole("buyer")
+                      window.scrollTo({ top: 0, behavior: "smooth" })
                     }}
-                    className="appearance-none bg-transparent pl-3 pr-7 py-2.5 text-xs font-bold text-[#241C15] cursor-pointer outline-none hover:text-[#B7592F] transition-colors"
+                    className="hover:text-[#241C15] transition-colors cursor-pointer"
                   >
-                    <option value="All">All Crafts</option>
-                    <option value="Pottery">🏺 Pottery</option>
-                    <option value="Textile">🧵 Textile</option>
-                    <option value="Woodwork">🪵 Woodwork</option>
-                    <option value="Metalwork">🪙 Metalwork</option>
-                    <option value="Jewelry">💍 Jewelry</option>
-                    <option value="Handicrafts">🪆 Handicrafts</option>
-                    <option value="Folk & Tribal Art">🎨 Folk Art</option>
-                    <option value="Bamboo & Cane">🎋 Bamboo</option>
-                    <option value="Stone Craft">🏛️ Stone</option>
-                    <option value="Leather Craft">👞 Leather</option>
-                  </select>
-                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] text-[#8C7E6D] pointer-events-none">
-                    ▼
-                  </span>
-                </div>
+                    Discover
+                  </button>
+                  <span className="text-[#DACBB8] select-none text-xs">·</span>
+                  <button
+                    onClick={() => {
+                      setBuyerExperience("catalog")
+                      setCurrentRole("buyer")
+                      setSelectedCategory("All")
+                      const el = document.getElementById("craft-catalog")
+                      if (el) {
+                        el.scrollIntoView({ behavior: "smooth" })
+                      } else {
+                        window.scrollTo({ top: 0, behavior: "smooth" })
+                      }
+                    }}
+                    className="hover:text-[#241C15] transition-colors cursor-pointer"
+                  >
+                    Crafts
+                  </button>
+                  <span className="text-[#DACBB8] select-none text-xs">·</span>
+                  <button
+                    onClick={() => {
+                      setCurrentRole("buyer")
+                      const el = document.getElementById("explore-by-craft") || document.getElementById("craft-catalog")
+                      if (el) el.scrollIntoView({ behavior: "smooth" })
+                    }}
+                    className="hover:text-[#241C15] transition-colors cursor-pointer"
+                  >
+                    Stories
+                  </button>
+                </nav>
 
-                {/* Search Icon */}
-                <span className="pl-3.5 text-[#8C7E6D] text-base pointer-events-none select-none">
-                  🔍
-                </span>
-
-                {/* Big Search Input Field */}
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onFocus={() => setIsSearchFocused(true)}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handlePerformSearch(searchQuery)
-                  }}
-                  autoComplete="off"
-                  spellCheck={false}
-                  placeholder={translate("searchPlaceholder", selectedLanguage)}
-                  className="w-full px-3 py-2.5 text-sm text-[#241C15] font-medium placeholder:text-[#8C7E6D] bg-transparent outline-none"
-                />
-
-                {/* Action Controls Inside Search Bar */}
-                <div className="flex items-center gap-1 pr-1.5 shrink-0">
-                  {searchQuery && (
+                {/* RIGHT: Actions */}
+                {currentRole === "artisan" ? (
+                  /* ── 1. Logged-in Artist Header View ── */
+                  <div className="flex items-center gap-2.5 sm:gap-4 text-xs font-sans shrink-0">
+                    {/* Subtle Search trigger */}
                     <button
-                      onClick={() => setSearchQuery("")}
-                      title="Clear search"
-                      className="w-6 h-6 rounded-full hover:bg-[#FAF7F2] text-[#8C7E6D] hover:text-[#241C15] flex items-center justify-center text-xs font-bold transition-colors cursor-pointer"
+                      onClick={() => setHeaderSearchExpanded(!headerSearchExpanded)}
+                      className="p-1.5 text-[#6B6255] hover:text-[#241C15] rounded-full hover:bg-[#FAF7F2] transition-colors cursor-pointer"
+                      title="Search"
+                      aria-label="Search"
                     >
-                      ✕
+                      <svg className="w-3.5 h-3.5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth="1.75">
+                        <circle cx="11" cy="11" r="7" />
+                        <path strokeLinecap="round" d="m20 20-3.5-3.5" />
+                      </svg>
                     </button>
-                  )}
 
-                  {/* AI Camera Price Scanner */}
-                  <button
-                    onClick={() => setCameraScannerOpen(true)}
-                    title="Search or Scan Crafts with AI Camera Lens"
-                    className="w-8 h-8 rounded-xl hover:bg-[#FAF7F2] text-[#241C15] hover:text-[#B7592F] flex items-center justify-center text-sm transition-colors cursor-pointer"
-                  >
-                    📷
-                  </button>
+                    <span className="text-[#DACBB8] select-none">·</span>
 
-                  {/* Voice Search Button */}
-                  <button
-                    onClick={() => setIsVoiceSearching(true)}
-                    title="Search by Voice in Regional Indian Languages"
-                    className="w-8 h-8 rounded-xl bg-[#FAF7F2] hover:bg-[#C9922E]/20 text-[#241C15] hover:text-[#B7592F] flex items-center justify-center text-sm transition-colors cursor-pointer"
-                  >
-                    🎙️
-                  </button>
-
-                  {/* Big Search Trigger Button */}
-                  <button
-                    onClick={() => handlePerformSearch(searchQuery)}
-                    className="bg-[#B7592F] hover:bg-[#964724] text-white px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1 cursor-pointer shrink-0"
-                  >
-                    <span>Search</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Live Search Matched Products & Suggestions Dropdown Popover */}
-              {isSearchFocused && (
-                <div className="absolute left-0 right-0 top-full mt-2 bg-white border border-[#E4DAC8] rounded-2xl shadow-2xl p-3.5 space-y-3 animate-in fade-in z-50 max-h-[520px] overflow-y-auto">
-                  {searchQuery.trim() ? (
-                    <div className="space-y-2.5">
-                      {/* Active Typed Query Banner */}
-                      <div className="flex items-center justify-between px-3 py-2 bg-[#FAF7F2] rounded-xl border border-[#E4DAC8]">
-                        <div className="flex items-center gap-2 text-xs truncate">
-                          <span className="text-[#8C7E6D]">Searching for:</span>
-                          <strong className="text-[#B7592F] font-bold font-serif text-sm bg-white px-2 py-0.5 rounded-lg border border-[#E4DAC8] truncate">
-                            "{searchQuery}"
-                          </strong>
-                        </div>
-                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#B7592F] text-white shrink-0 ml-2">
-                          {liveMatchedProducts.length} crafts
+                    {/* EN ▾ Language Selector */}
+                    <div className="relative">
+                      <button
+                        onClick={() => setLangMenuOpen(!langMenuOpen)}
+                        className="text-xs font-medium text-[#5B5750] hover:text-[#241C15] transition-colors cursor-pointer flex items-center gap-1"
+                        title="Language selection"
+                      >
+                        <span>
+                          {LANGUAGES.find((l) => l.code === selectedLanguage)?.code.toUpperCase() || "EN"}
                         </span>
-                      </div>
+                        <span className="text-[8px] text-[#8C7E6D]">▾</span>
+                      </button>
 
-                      {liveMatchedProducts.length > 0 ? (
-                        <div className="divide-y divide-[#E4DAC8]/40 pt-1">
-                          {liveMatchedProducts.slice(0, 5).map((item) => {
-                            const pName = item.name[selectedLanguage] || item.name.en
-                            const pLoc = item.location[selectedLanguage] || item.location.en
-                            return (
-                              <div
-                                key={item.id}
-                                onMouseDown={(e) => {
-                                  e.preventDefault()
-                                  setSelectedProductForDetail(item)
-                                  setIsSearchFocused(false)
+                      {langMenuOpen && (
+                        <div className="absolute right-0 mt-2 w-48 bg-white border border-[#E4DAC8] rounded-xl shadow-lg z-50 p-1.5 max-h-72 overflow-y-auto animate-in fade-in">
+                          <div className="grid grid-cols-2 gap-0.5">
+                            {LANGUAGES.map((l) => (
+                              <button
+                                key={l.code}
+                                onClick={() => {
+                                  setSelectedLanguage(l.code)
+                                  setLangMenuOpen(false)
+                                  showToast(`Language switched to ${l.nativeName}`)
                                 }}
-                                className="flex items-center gap-3 p-2 rounded-xl hover:bg-[#FAF7F2] transition-colors cursor-pointer group"
+                                className={`text-left px-2 py-1.5 rounded-lg text-xs transition-colors cursor-pointer flex items-center gap-1.5 ${
+                                  selectedLanguage === l.code
+                                    ? "bg-[#FAF7F2] text-[#B7592F] font-bold"
+                                    : "hover:bg-[#FAF7F2] text-[#5B5750]"
+                                }`}
                               >
-                                <img
-                                  src={item.image}
-                                  alt={pName}
-                                  className="w-12 h-12 rounded-xl object-cover border border-[#E4DAC8] shrink-0 group-hover:scale-105 transition-transform"
-                                  onError={(e) => {
-                                    e.currentTarget.onerror = null
-                                    e.currentTarget.src =
-                                      "https://images.unsplash.com/photo-1590736969955-71cc94801759?w=800&h=800&fit=crop&auto=format"
-                                  }}
-                                />
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-1.5">
-                                    <h4 className="text-xs font-bold text-[#241C15] group-hover:text-[#B7592F] transition-colors truncate">
-                                      <HighlightMatch text={pName} query={searchQuery} />
-                                    </h4>
-                                    {item.gi_tagged && (
-                                      <span className="shrink-0 text-[8.5px] font-bold bg-[#C9922E]/20 text-[#241C15] px-1.5 py-0.2 rounded-full">
-                                        GI
-                                      </span>
-                                    )}
-                                  </div>
-                                  <p className="text-[11px] text-[#8C7E6D] truncate">
-                                    by <span className="font-semibold text-[#6B6255]">{item.artisan}</span> • {pLoc.split(",")[0]}
-                                  </p>
-                                  <span className="text-[9.5px] text-[#8C7E6D] bg-[#FAF7F2] px-1.5 py-0.5 rounded border border-[#E4DAC8]/60">
-                                    {item.category}
-                                  </span>
-                                </div>
-                                <div className="text-right shrink-0 flex flex-col items-end gap-1">
-                                  <span className="text-xs font-bold text-[#B7592F] font-serif block">
-                                    ₹{item.price.toLocaleString("en-IN")}
-                                  </span>
-                                  <div className="flex items-center gap-1">
-                                    <button
-                                      onMouseDown={(e) => {
-                                        e.preventDefault()
-                                        e.stopPropagation()
-                                        handleAddToCart(item)
-                                      }}
-                                      title="Add to Bag"
-                                      className="px-2 py-0.5 rounded-lg bg-[#241C15] hover:bg-[#3A2C20] text-[#F7F2E9] text-[10px] font-semibold transition-colors cursor-pointer"
-                                    >
-                                      + Bag
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            )
-                          })}
-
-                          <div className="pt-2">
-                            <button
-                              onMouseDown={(e) => {
-                                e.preventDefault()
-                                handlePerformSearch(searchQuery)
-                              }}
-                              className="w-full text-center py-2 rounded-xl bg-[#FAF7F2] hover:bg-[#EFE8D8] text-xs font-bold text-[#B7592F] transition-colors cursor-pointer flex items-center justify-center gap-1.5"
-                            >
-                              <span>View all {liveMatchedProducts.length} results in catalog</span>
-                              <span>→</span>
-                            </button>
+                                <span>{l.flag}</span>
+                                <span className="truncate">{l.name}</span>
+                              </button>
+                            ))}
                           </div>
-                        </div>
-                      ) : (
-                        <div className="py-6 text-center space-y-1.5">
-                          <span className="text-2xl">🔍</span>
-                          <p className="text-xs font-bold text-[#241C15]">
-                            No artisan crafts found matching "{searchQuery}"
-                          </p>
-                          <p className="text-[11px] text-[#8C7E6D]">
-                            Try searching for pottery, silk, woodwork, brass, or artisan names.
-                          </p>
                         </div>
                       )}
                     </div>
-                  ) : (
-                    <div className="space-y-3">
-                      <div>
-                        <div className="flex items-center justify-between px-1 pb-1.5 border-b border-[#E4DAC8]/60">
-                          <span className="text-[11px] font-bold uppercase tracking-wider text-[#8C7E6D]">
-                            🔥 Popular Artisan Crafts
-                          </span>
-                          <span className="text-[10px] text-[#8C7E6D]">
-                            Quick Suggestions
-                          </span>
-                        </div>
-                        <div className="grid grid-cols-2 gap-1.5 pt-2">
-                          {TRENDING_SEARCHES.map((item) => (
-                            <button
-                              key={item.label}
-                              onMouseDown={(e) => {
-                                e.preventDefault()
-                                handlePerformSearch(item.query, item.category)
-                              }}
-                              className="flex items-center gap-2 p-2 rounded-xl text-left hover:bg-[#FAF7F2] text-xs font-semibold text-[#241C15] transition-colors cursor-pointer border border-transparent hover:border-[#E4DAC8]"
-                            >
-                              <span className="text-base">{item.icon}</span>
-                              <div className="truncate">
-                                <div className="truncate">{item.label}</div>
-                                <span className="text-[10px] text-[#8C7E6D] font-normal">{item.category}</span>
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
 
-                      <div className="pt-2 border-t border-[#E4DAC8]/60">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-[#8C7E6D] px-1 block mb-1.5">
-                          ✨ Trending Handicrafts
-                        </span>
-                        <div className="space-y-1">
-                          {liveMatchedProducts.slice(0, 3).map((item) => {
-                            const pName = item.name[selectedLanguage] || item.name.en
-                            return (
-                              <div
-                                key={item.id}
-                                onMouseDown={(e) => {
-                                  e.preventDefault()
-                                  setSelectedProductForDetail(item)
-                                  setIsSearchFocused(false)
-                                }}
-                                className="flex items-center justify-between p-1.5 rounded-xl hover:bg-[#FAF7F2] transition-colors cursor-pointer"
-                              >
-                                <div className="flex items-center gap-2.5 min-w-0">
-                                  <img
-                                    src={item.image}
-                                    alt={pName}
-                                    className="w-8 h-8 rounded-lg object-cover shrink-0"
-                                  />
-                                  <span className="text-xs font-medium text-[#241C15] truncate">
-                                    {pName}
-                                  </span>
-                                </div>
-                                <span className="text-xs font-bold text-[#B7592F] shrink-0 ml-2 font-serif">
-                                  ₹{item.price.toLocaleString("en-IN")}
-                                </span>
-                              </div>
-                            )
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+                    <span className="text-[#DACBB8] select-none">·</span>
 
-            {/* Role & Personal Account Navigation Hub */}
-            <div className="header-actions flex items-center gap-2 sm:gap-3 shrink-0">
-              {/* Personal User Identity & Account Card Switcher */}
-              <div className="relative z-20">
-                <button
-                  onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-                  className="user-account-btn flex items-center gap-2 bg-[#EFE8D8] hover:bg-[#E4DAC8] border border-[#C9922E]/40 pl-2 pr-3 py-1.5 rounded-full text-xs font-bold text-[#241C15] transition-all shadow-xs cursor-pointer"
-                  title="Manage Personal Account, Switch Identity or Log In"
-                >
-                  <div className="w-6 h-6 rounded-full bg-[#241C15] text-[#F7F2E9] flex items-center justify-center text-[11px] font-bold shrink-0">
-                    {currentUser.name.charAt(0)}
-                  </div>
-                  <div className="user-details text-left hidden sm:block max-w-[130px] truncate">
-                    <div className="text-[11px] font-bold text-[#241C15] leading-tight truncate">
-                      {currentUser.name}
-                    </div>
-                    <div className="text-[9px] text-[#8C7E6D] uppercase tracking-wider font-semibold">
-                      {currentUser.role === "b2b_gov"
-                        ? "B2B / GeM"
-                        : currentUser.role}
-                    </div>
-                  </div>
-                  <span className="text-[9px] text-[#8C7E6D]">▼</span>
-                </button>
-
-                {userDropdownOpen && (
-                  <div className="user-dropdown absolute right-0 mt-2 w-72 bg-white border border-[#E4DAC8] rounded-3xl shadow-2xl z-50 p-3 space-y-2.5 animate-in fade-in">
-                    {/* Active Personal Account Card */}
-                    <div className="p-3 bg-[#FAF7F2] border border-[#E4DAC8] rounded-2xl space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#8C7E6D]">
-                          Signed In As
-                        </span>
-                        <span className="px-2 py-0.5 rounded-md bg-[#241C15] text-[#F7F2E9] text-[9.5px] font-bold uppercase">
-                          {currentUser.role === "b2b_gov"
-                            ? "B2B / GeM"
-                            : currentUser.role}
-                        </span>
-                      </div>
-                      <div className="text-xs font-bold text-[#241C15]">
-                        {currentUser.name}
-                      </div>
-                      <div className="text-[11px] text-[#6B6255] font-mono">
-                        {currentUser.mobile}
-                      </div>
-                      <div className="text-[10px] text-[#8C7E6D] font-mono">
-                        {currentUser.email}
-                      </div>
-                    </div>
-
-                    {/* Personal Login & Registration Action Buttons */}
-                    <div className="space-y-1">
+                    {/* 8830070893 ▾ Menu */}
+                    <div className="relative" ref={artisanMenuRef}>
                       <button
-                        onClick={() => {
-                          setUserDropdownOpen(false)
-                          setUniversalAuthModalOpen(true)
-                        }}
-                        className="w-full text-left px-3 py-2 rounded-xl text-xs font-bold text-white bg-[#B7592F] hover:bg-[#964724] transition-colors cursor-pointer flex items-center gap-2 shadow-xs"
+                        onClick={() => setArtisanHeaderMenuOpen(!artisanHeaderMenuOpen)}
+                        className="flex items-center gap-1 text-xs font-medium text-[#241C15] hover:text-[#B7592F] transition-colors cursor-pointer"
+                        title="Artist Studio Menu"
                       >
-                        <span>👤</span>
-                        <span>Personal Login / Switch Identity</span>
+                        <span>{currentUser.mobile || currentSeller.phone || "8830070893"}</span>
+                        <span className="text-[8px] text-[#8C7E6D]">▾</span>
                       </button>
 
-                      <button
-                        onClick={() => {
-                          setUserDropdownOpen(false)
-                          setUniversalAuthModalOpen(true)
-                        }}
-                        className="w-full text-left px-3 py-1.5 rounded-xl text-xs font-medium text-[#241C15] hover:bg-[#FAF7F2] transition-colors cursor-pointer flex items-center gap-2"
-                      >
-                        <span>📱</span>
-                        <span>Personal Phone OTP Login</span>
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          setUserDropdownOpen(false)
-                          setUniversalAuthModalOpen(true)
-                        }}
-                        className="w-full text-left px-3 py-1.5 rounded-xl text-xs font-medium text-[#241C15] hover:bg-[#FAF7F2] transition-colors cursor-pointer flex items-center gap-2"
-                      >
-                        <span>📝</span>
-                        <span>Register New Personal User</span>
-                      </button>
-                    </div>
-
-                    {/* Direct Quick Role Switcher */}
-                    <div className="pt-2 border-t border-[#E4DAC8]">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-[#8C7E6D] px-1 mb-1">
-                        Switch Role Portal:
-                      </p>
-                      <div className="space-y-0.5 max-h-36 overflow-y-auto pr-0.5">
-                        {[
-                          {
-                            role: "buyer" as Role,
-                            label: "🛒 Buyer Storefront",
-                            sub: "Browse & Buy Crafts",
-                          },
-                          {
-                            role: "artisan" as Role,
-                            label: "🏬 Artisan / Seller",
-                            sub: "Workplace & Studio",
-                          },
-                          {
-                            role: "producer" as Role,
-                            label: "🏭 Workshop Producer",
-                            sub: "Production Batches",
-                          },
-                          {
-                            role: "delivery" as Role,
-                            label: "🛵 Delivery Agent",
-                            sub: "Doorstep Deliveries",
-                          },
-                          {
-                            role: "admin" as Role,
-                            label: "🛡️ Main Admin Portal",
-                            sub: "Platform Management",
-                          },
-                          {
-                            role: "b2b_gov" as Role,
-                            label: "🏛️ B2B / GeM Portal",
-                            sub: "Institutional Linkage",
-                          },
-                        ].map((item) => (
+                      {artisanHeaderMenuOpen && (
+                        <div className="absolute right-0 mt-2 w-44 bg-[#FAF7F2] border border-[#E4DAC8] rounded-xl shadow-xl z-50 py-1.5 text-xs font-sans animate-in fade-in">
                           <button
-                            key={item.role}
-                            onClick={() => handleSwitchAccountRole(item.role)}
-                            className={`w-full text-left px-2.5 py-1.5 rounded-xl text-[11px] transition-colors cursor-pointer flex items-center justify-between ${
-                              currentRole === item.role
-                                ? "bg-[#241C15] text-[#F7F2E9] font-bold"
-                                : "hover:bg-[#FAF7F2] text-[#241C15]"
-                            }`}
+                            onClick={() => {
+                              setCurrentRole("artisan")
+                              setArtisanStudioActiveTab("studio")
+                              setArtisanHeaderMenuOpen(false)
+                              window.scrollTo({ top: 0, behavior: "smooth" })
+                            }}
+                            className="w-full text-left px-4 py-2 hover:bg-[#EFE8D8] text-[#241C15] transition-colors cursor-pointer font-medium"
                           >
-                            <span>{item.label}</span>
-                            {currentRole === item.role && (
-                              <span className="text-[9px] text-[#C9922E] font-bold">
-                                ACTIVE
-                              </span>
-                            )}
+                            My Studio
                           </button>
-                        ))}
-                      </div>
+                          <button
+                            onClick={() => {
+                              setCurrentRole("artisan")
+                              setArtisanStudioActiveTab("crafts")
+                              setArtisanHeaderMenuOpen(false)
+                              window.scrollTo({ top: 0, behavior: "smooth" })
+                            }}
+                            className="w-full text-left px-4 py-2 hover:bg-[#EFE8D8] text-[#241C15] transition-colors cursor-pointer font-medium"
+                          >
+                            My Crafts
+                          </button>
+                          <button
+                            onClick={() => {
+                              setCurrentRole("artisan")
+                              setArtisanStudioActiveTab("orders")
+                              setArtisanHeaderMenuOpen(false)
+                              window.scrollTo({ top: 0, behavior: "smooth" })
+                            }}
+                            className="w-full text-left px-4 py-2 hover:bg-[#EFE8D8] text-[#241C15] transition-colors cursor-pointer font-medium"
+                          >
+                            Orders
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSellerAuthModalMode("edit")
+                              setSellerAuthModalOpen(true)
+                              setArtisanHeaderMenuOpen(false)
+                            }}
+                            className="w-full text-left px-4 py-2 hover:bg-[#EFE8D8] text-[#241C15] transition-colors cursor-pointer font-medium"
+                          >
+                            Edit Studio
+                          </button>
+                          <div className="border-t border-[#E4DAC8] my-1" />
+                          <button
+                            onClick={() => {
+                              handleLogout()
+                              setArtisanHeaderMenuOpen(false)
+                            }}
+                            className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-700 transition-colors cursor-pointer font-medium"
+                          >
+                            Logout
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  /* ── 2. Buyer / Marketplace Header Right ── */
+                  <div className="flex items-center gap-2.5 sm:gap-3.5 text-xs font-sans shrink-0">
+                    {/* Subtle Search trigger */}
+                    <button
+                      onClick={() => setHeaderSearchExpanded(!headerSearchExpanded)}
+                      className="p-1.5 text-[#6B6255] hover:text-[#241C15] rounded-full hover:bg-[#FAF7F2] transition-colors cursor-pointer"
+                      title="Search crafts and artisans"
+                      aria-label="Search"
+                    >
+                      <svg className="w-3.5 h-3.5 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth="1.75">
+                        <circle cx="11" cy="11" r="7" />
+                        <path strokeLinecap="round" d="m20 20-3.5-3.5" />
+                      </svg>
+                    </button>
+
+                    {/* EN ▾ Language Selector */}
+                    <div className="relative">
+                      <button
+                        onClick={() => setLangMenuOpen(!langMenuOpen)}
+                        className="text-xs font-medium text-[#5B5750] hover:text-[#241C15] transition-colors cursor-pointer flex items-center gap-1"
+                      >
+                        <span>
+                          {LANGUAGES.find((l) => l.code === selectedLanguage)?.code.toUpperCase() || "EN"}
+                        </span>
+                        <span className="text-[8px] text-[#8C7E6D]">▾</span>
+                      </button>
+
+                      {langMenuOpen && (
+                        <div className="absolute right-0 mt-2 w-48 bg-white border border-[#E4DAC8] rounded-xl shadow-lg z-50 p-1.5 max-h-72 overflow-y-auto animate-in fade-in">
+                          <div className="grid grid-cols-2 gap-0.5">
+                            {LANGUAGES.map((l) => (
+                              <button
+                                key={l.code}
+                                onClick={() => {
+                                  setSelectedLanguage(l.code)
+                                  setLangMenuOpen(false)
+                                  showToast(`Language switched to ${l.nativeName}`)
+                                }}
+                                className={`text-left px-2 py-1.5 rounded-lg text-xs transition-colors cursor-pointer flex items-center gap-1.5 ${
+                                  selectedLanguage === l.code
+                                    ? "bg-[#FAF7F2] text-[#B7592F] font-bold"
+                                    : "hover:bg-[#FAF7F2] text-[#5B5750]"
+                                }`}
+                              >
+                                <span>{l.flag}</span>
+                                <span className="truncate">{l.name}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
-                    {/* Sign Out Button */}
-                    <div className="pt-2 border-t border-[#E4DAC8]">
+                    <span className="text-[#DACBB8] select-none hidden sm:inline">·</span>
+
+                    {/* Account: if logged in as artisan, show phone dropdown; if buyer, show buyer dropdown; if guest, show login */}
+                    {isLoggedIn && (currentUser.role === "artisan" || currentRole === "artisan") ? (
+                      <div className="relative" ref={artisanMenuRef}>
+                        <button
+                          onClick={() => setArtisanHeaderMenuOpen(!artisanHeaderMenuOpen)}
+                          className="flex items-center gap-1 text-xs font-medium text-[#241C15] hover:text-[#B7592F] transition-colors cursor-pointer"
+                        >
+                          <span>{currentUser.mobile || currentSeller.phone || "8830070893"}</span>
+                          <span className="text-[8px] text-[#8C7E6D]">▾</span>
+                        </button>
+
+                        {artisanHeaderMenuOpen && (
+                          <div className="absolute right-0 mt-2 w-44 bg-[#FAF7F2] border border-[#E4DAC8] rounded-xl shadow-xl z-50 py-1.5 text-xs font-sans animate-in fade-in">
+                            <button
+                              onClick={() => {
+                                setCurrentRole("artisan")
+                                setArtisanStudioActiveTab("studio")
+                                setArtisanHeaderMenuOpen(false)
+                                window.scrollTo({ top: 0, behavior: "smooth" })
+                              }}
+                              className="w-full text-left px-4 py-2 hover:bg-[#EFE8D8] text-[#241C15] transition-colors cursor-pointer font-medium"
+                            >
+                              My Studio
+                            </button>
+                            <button
+                              onClick={() => {
+                                setCurrentRole("artisan")
+                                setArtisanStudioActiveTab("crafts")
+                                setArtisanHeaderMenuOpen(false)
+                                window.scrollTo({ top: 0, behavior: "smooth" })
+                              }}
+                              className="w-full text-left px-4 py-2 hover:bg-[#EFE8D8] text-[#241C15] transition-colors cursor-pointer font-medium"
+                            >
+                              My Crafts
+                            </button>
+                            <button
+                              onClick={() => {
+                                setCurrentRole("artisan")
+                                setArtisanStudioActiveTab("orders")
+                                setArtisanHeaderMenuOpen(false)
+                                window.scrollTo({ top: 0, behavior: "smooth" })
+                              }}
+                              className="w-full text-left px-4 py-2 hover:bg-[#EFE8D8] text-[#241C15] transition-colors cursor-pointer font-medium"
+                            >
+                              Orders
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSellerAuthModalMode("edit")
+                                setSellerAuthModalOpen(true)
+                                setArtisanHeaderMenuOpen(false)
+                              }}
+                              className="w-full text-left px-4 py-2 hover:bg-[#EFE8D8] text-[#241C15] transition-colors cursor-pointer font-medium"
+                            >
+                              Edit Studio
+                            </button>
+                            <div className="border-t border-[#E4DAC8] my-1" />
+                            <button
+                              onClick={() => {
+                                handleLogout()
+                                setArtisanHeaderMenuOpen(false)
+                              }}
+                              className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-700 transition-colors cursor-pointer font-medium"
+                            >
+                              Logout
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ) : isLoggedIn ? (
+                      <div className="relative">
+                        <button
+                          onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                          className="flex items-center gap-1 text-xs font-medium text-[#241C15] hover:text-[#B7592F] transition-colors cursor-pointer"
+                        >
+                          <span className="truncate max-w-[100px]">{currentUser.name || currentUser.mobile}</span>
+                          <span className="text-[8px] text-[#8C7E6D]">▾</span>
+                        </button>
+
+                        {userDropdownOpen && (
+                          <div className="absolute right-0 mt-2 w-48 bg-[#FAF7F2] border border-[#E4DAC8] rounded-xl shadow-xl z-50 py-1.5 text-xs font-sans animate-in fade-in">
+                            <div className="px-4 py-2 border-b border-[#E4DAC8]">
+                              <p className="font-semibold text-[#241C15] truncate">{currentUser.name}</p>
+                              <p className="text-[10px] text-[#8C7E6D]">{currentUser.mobile}</p>
+                            </div>
+                            <button
+                              onClick={() => {
+                                setUserDropdownOpen(false)
+                                setTrackingLookupOrderId(null)
+                                setCustomerOrdersModalOpen(true)
+                              }}
+                              className="w-full text-left px-4 py-2 hover:bg-[#EFE8D8] text-[#241C15] transition-colors cursor-pointer"
+                            >
+                              My Orders ({customerOrders.length})
+                            </button>
+                            <button
+                              onClick={() => {
+                                setUserDropdownOpen(false)
+                                setCurrentRole("artisan")
+                                window.scrollTo({ top: 0, behavior: "smooth" })
+                              }}
+                              className="w-full text-left px-4 py-2 hover:bg-[#EFE8D8] text-[#241C15] transition-colors cursor-pointer"
+                            >
+                              Artisan Studio
+                            </button>
+                            <div className="border-t border-[#E4DAC8] my-1" />
+                            <button
+                              onClick={() => {
+                                setUserDropdownOpen(false)
+                                handleLogout()
+                              }}
+                              className="w-full text-left px-4 py-2 hover:bg-red-50 text-red-700 transition-colors cursor-pointer"
+                            >
+                              Sign Out
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => setBuyerAuthModalOpen(true)}
+                          className="text-xs font-medium text-[#5B5750] hover:text-[#241C15] transition-colors cursor-pointer"
+                        >
+                          Login as Buyer
+                        </button>
+                        <button
+                          onClick={() => setArtistAuthModalOpen(true)}
+                          className="text-xs font-medium text-[#B7592F] hover:text-[#964724] transition-colors cursor-pointer"
+                        >
+                          Login as Artist
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Subtle Bag / Cart */}
+                    <button
+                      onClick={() => setCartOpen(true)}
+                      className="relative p-1.5 text-[#241C15] hover:text-[#B7592F] transition-colors cursor-pointer"
+                      title="Shopping bag"
+                      aria-label="Shopping Bag"
+                    >
+                      <svg className="w-4 h-4 stroke-current" fill="none" viewBox="0 0 24 24" strokeWidth="1.75">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M15.75 10.5V6a3.75 3.75 0 1 0-7.5 0v4.5m11.356-1.993 1.263 12c.07.665-.45 1.243-1.119 1.243H4.25c-.669 0-1.189-.578-1.119-1.243l1.263-12A1.125 1.125 0 0 1 5.513 7.5h12.974c.576 0 1.059.435 1.119 1.007ZM8.625 10.5a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm7.5 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"
+                        />
+                      </svg>
+                      {cart.length > 0 && (
+                        <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-[#B7592F] text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                          {cart.reduce((s, i) => s + i.qty, 0)}
+                        </span>
+                      )}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Expandable Search Overlay (When user clicks Search) */}
+            {headerSearchExpanded && (
+              <div ref={headerSearchRef} className="border-t border-[#E4DAC8] bg-[#FAF7F2] px-4 sm:px-8 py-3 animate-in fade-in">
+                <div className="max-w-2xl mx-auto space-y-2 relative">
+                  <div className="flex items-center bg-white border border-[#E4DAC8] rounded-xl px-3 py-2 focus-within:border-[#B7592F] shadow-xs">
+                    <span className="text-[#8C7E6D] text-xs mr-2">🔍</span>
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          handlePerformSearch(searchQuery)
+                          setHeaderSearchExpanded(false)
+                        }
+                      }}
+                      placeholder={translate("searchPlaceholder", selectedLanguage)}
+                      className="w-full text-xs sm:text-sm text-[#241C15] bg-transparent outline-none placeholder:text-[#8C7E6D]"
+                      autoFocus
+                    />
+                    <div className="flex items-center gap-1.5 ml-2 shrink-0">
                       <button
-                        onClick={handleLogout}
-                        className="w-full text-left px-3 py-1.5 rounded-xl text-xs font-semibold text-red-700 hover:bg-red-50 transition-colors cursor-pointer flex items-center gap-1.5"
+                        onClick={() => {
+                          setCameraScannerOpen(true)
+                          setHeaderSearchExpanded(false)
+                        }}
+                        className="px-1.5 py-0.5 hover:bg-[#FAF7F2] rounded text-xs text-[#6B6255] hover:text-[#241C15] transition-colors cursor-pointer"
+                        title="AI Camera Price Scanner"
                       >
-                        <span>🚪</span>
-                        <span>Sign Out (Guest Mode)</span>
+                        📷
+                      </button>
+                      <button
+                        onClick={() => {
+                          setIsVoiceSearching(true)
+                          setHeaderSearchExpanded(false)
+                        }}
+                        className="px-1.5 py-0.5 hover:bg-[#FAF7F2] rounded text-xs text-[#6B6255] hover:text-[#241C15] transition-colors cursor-pointer"
+                        title="Voice Search"
+                      >
+                        🎙️
+                      </button>
+                      <button
+                        onClick={() => {
+                          handlePerformSearch(searchQuery)
+                          setHeaderSearchExpanded(false)
+                        }}
+                        className="px-3 py-1 bg-[#B7592F] hover:bg-[#964724] text-white text-xs font-semibold rounded-lg shadow-xs cursor-pointer"
+                      >
+                        Search
+                      </button>
+                      <button
+                        onClick={() => setHeaderSearchExpanded(false)}
+                        className="px-1.5 py-0.5 hover:bg-[#FAF7F2] rounded text-xs text-[#8C7E6D] hover:text-[#241C15] cursor-pointer"
+                        title="Close Search"
+                      >
+                        ✕
                       </button>
                     </div>
                   </div>
-                )}
-              </div>
 
-              {/* Universal Language Switcher */}
-              <div className="relative z-20">
-                <button
-                  onClick={() => setLangMenuOpen(!langMenuOpen)}
-                  className="lang-btn flex items-center gap-1.5 bg-[#FAF7F2] hover:bg-[#EFE8D8] border border-[#E4DAC8] rounded-full px-3 py-1.5 text-xs font-semibold text-[#241C15] transition-colors shadow-xs cursor-pointer"
-                >
-                  <span>
-                    {LANGUAGES.find((l) => l.code === selectedLanguage)?.flag ||
-                      "🌐"}
-                  </span>
-                  <span className="lang-label font-bold text-[11px] hidden sm:inline">
-                    {LANGUAGES.find((l) => l.code === selectedLanguage)
-                      ?.nativeName || selectedLanguage.toUpperCase()}
-                  </span>
-                  <span className="text-[9px] text-[#8C7E6D]">▼</span>
-                </button>
-
-                {langMenuOpen && (
-                  <div className="lang-dropdown absolute right-0 mt-2 w-64 bg-white border border-[#E4DAC8] rounded-2xl shadow-xl z-50 p-2 max-h-80 overflow-y-auto">
-                    <div className="px-2 py-1.5 border-b border-[#E4DAC8] mb-1">
-                      <p className="text-[11px] font-bold uppercase tracking-wider text-[#8C7E6D]">
-                        Select Regional Language
-                      </p>
-                      <p className="text-[10px] text-[#6B6255]">
-                        Instant full UI translation
-                      </p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-1">
-                      {LANGUAGES.map((lang) => (
-                        <button
-                          key={lang.code}
-                          onClick={() => {
-                            setSelectedLanguage(lang.code)
-                            setLangMenuOpen(false)
-                            showToast(`Language switched to ${lang.nativeName}`)
-                          }}
-                          className={`flex items-center gap-1.5 text-left px-2.5 py-2 rounded-xl text-xs transition-colors cursor-pointer ${
-                            selectedLanguage === lang.code
-                              ? "bg-[#C9922E]/15 text-[#241C15] font-bold border border-[#C9922E]/30"
-                              : "hover:bg-[#FAF7F2] text-[#6B6255]"
-                          }`}
-                        >
-                          <span>{lang.flag}</span>
-                          <span className="truncate">{lang.nativeName}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Notification Bell with Role Filter */}
-              <div className="relative z-20">
-                <button
-                  onClick={() =>
-                    setNotificationPanelOpen(!notificationPanelOpen)
-                  }
-                  className="notification-btn relative w-8 h-8 rounded-full bg-[#FAF7F2] hover:bg-[#EFE8D8] border border-[#E4DAC8] flex items-center justify-center text-xs transition-colors cursor-pointer"
-                  title="View Notifications"
-                >
-                  <span>🔔</span>
-                  {unreadNotificationsCount > 0 && (
-                    <span className="notif-badge absolute -top-1 -right-1 bg-red-600 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
-                      {unreadNotificationsCount}
-                    </span>
-                  )}
-                </button>
-
-                <NotificationPanel
-                  isOpen={notificationPanelOpen}
-                  onClose={() => setNotificationPanelOpen(false)}
-                  currentRole={currentRole}
-                  notifications={notifications}
-                  onMarkAsRead={(id) => {
-                    setNotifications((prev) =>
-                      prev.map((n) => (n.id === id ? { ...n, read: true } : n)),
-                    )
-                  }}
-                  onClearAll={() => {
-                    setNotifications((prev) =>
-                      prev.map((n) => ({ ...n, read: true })),
-                    )
-                    showToast("All notifications marked as read.")
-                  }}
-                  onSelectOrderNotification={(orderId) => {
-                    setTrackingLookupOrderId(orderId)
-                    setCustomerOrdersModalOpen(true)
-                  }}
-                />
-              </div>
-
-              {/* Personal Login & Multi-Role Identity Access Button */}
-              <button
-                onClick={() => setUniversalAuthModalOpen(true)}
-                className="flex items-center gap-1.5 bg-[#241C15] hover:bg-[#3A2C20] text-[#F7F2E9] px-3 sm:px-3.5 py-1.5 rounded-full text-xs font-bold transition-all shadow-xs cursor-pointer"
-                id="login-btn"
-                title="Personal Login with Mobile Phone OTP or Credentials"
-              >
-                <span>👤</span>
-                <span className="action-btn-label hidden sm:inline">Personal Login</span>
-                <span className="action-btn-label sm:hidden">Login</span>
-              </button>
-
-              {/* Add Handmade Craft Button (Accessible to all verified artisans & makers) */}
-              <button
-                onClick={() => setAddCraftModalOpen(true)}
-                className="flex items-center gap-1.5 bg-[#B7592F] hover:bg-[#964724] text-white px-3 sm:px-3.5 py-1.5 rounded-full text-xs font-bold transition-all shadow-xs cursor-pointer group"
-                title="List a 100% authentic handcrafted item made by certified Indian artisans"
-              >
-                <span className="group-hover:rotate-12 transition-transform">
-                  ✨
-                </span>
-                <span className="action-btn-label hidden sm:inline">Add Handmade Craft</span>
-                <span className="action-btn-label sm:hidden">+ Craft</span>
-              </button>
-
-              {/* Track Delivery Button (Direct access for buyers to track parcel milestones and OTP) */}
-              <button
-                onClick={() => {
-                  setTrackingLookupOrderId(null)
-                  setCustomerOrdersModalOpen(true)
-                }}
-                className="action-hide-mobile flex items-center gap-1.5 bg-[#FAF7F2] hover:bg-[#EFE8D8] border border-[#C9922E]/50 text-[#241C15] px-3 py-1.5 rounded-full text-xs font-semibold transition-colors shadow-xs cursor-pointer"
-                title="Track package delivery, GPS milestones, delivery agent contact & doorstep OTP"
-              >
-                <span>🚚</span>
-                <span className="hidden sm:inline">Track Delivery</span>
-                {customerOrders.some(
-                  (o) => o.status === "Out for Delivery",
-                ) && (
-                  <span
-                    className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"
-                    title="Parcel Out for Delivery"
-                  />
-                )}
-              </button>
-
-              {/* My Orders Button (For Buyers) */}
-              {currentRole === "buyer" && (
-                <button
-                  onClick={() => {
-                    setTrackingLookupOrderId(null)
-                    setCustomerOrdersModalOpen(true)
-                  }}
-                  className="action-hide-mobile flex items-center gap-1.5 bg-[#FAF7F2] hover:bg-[#EFE8D8] border border-[#E4DAC8] text-[#241C15] px-3 py-1.5 rounded-full text-xs font-semibold transition-colors shadow-xs cursor-pointer relative"
-                  title="View your orders, invoices, and live package tracking"
-                >
-                  <span>📦</span>
-                  <span className="hidden sm:inline">My Orders</span>
-                  {customerOrders.length > 0 && (
-                    <span className="bg-[#B7592F] text-white text-[10px] font-bold px-1.5 rounded-full">
-                      {customerOrders.length}
-                    </span>
-                  )}
-                </button>
-              )}
-
-              {/* Craft Bag (Cart) */}
-              {currentRole === "buyer" && (
-                <button
-                  onClick={() => setCartOpen(true)}
-                  className="flex items-center gap-1.5 bg-[#241C15] hover:bg-[#3A2C20] text-[#F7F2E9] px-3.5 py-1.5 rounded-full text-xs font-semibold transition-colors shadow-xs cursor-pointer"
-                >
-                  <span>🛍️</span>
-                  <span className="action-btn-label hidden sm:inline">
-                    {translate("navBag", selectedLanguage)}
-                  </span>
-                  {cart.length > 0 && (
-                    <span className="bg-[#C9922E] text-[#241C15] text-[10px] font-bold px-1.5 rounded-full">
-                      {cart.reduce((s, i) => s + i.qty, 0)}
-                    </span>
-                  )}
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Dedicated Mobile Big Search Bar (< md) */}
-        <div ref={mobileSearchRef} className="mobile-search-bar md:hidden px-4 pb-3 relative z-30">
-          <div className="search-container relative flex items-center bg-white rounded-2xl border-2 border-[#E4DAC8] focus-within:border-[#B7592F] shadow-xs">
-            <span className="pl-3.5 text-[#8C7E6D] text-sm pointer-events-none select-none">
-              🔍
-            </span>
-            <input
-              type="text"
-              value={searchQuery}
-              onFocus={() => setIsMobileSearchFocused(true)}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handlePerformSearch(searchQuery)
-              }}
-              autoComplete="off"
-              spellCheck={false}
-              placeholder={translate("searchPlaceholder", selectedLanguage)}
-              className="w-full px-2.5 py-2.5 text-xs text-[#241C15] font-medium placeholder:text-[#8C7E6D] bg-transparent outline-none"
-            />
-            <div className="flex items-center gap-1 pr-1.5 shrink-0">
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className="w-6 h-6 rounded-full text-[#8C7E6D] hover:text-[#241C15] text-xs font-bold cursor-pointer"
-                  title="Clear search"
-                >
-                  ✕
-                </button>
-              )}
-              <button
-                onClick={() => setCameraScannerOpen(true)}
-                className="w-7 h-7 rounded-lg text-xs hover:bg-[#FAF7F2] flex items-center justify-center cursor-pointer"
-                title="AI Camera Price Scanner"
-              >
-                📷
-              </button>
-              <button
-                onClick={() => setIsVoiceSearching(true)}
-                className="w-7 h-7 rounded-lg bg-[#FAF7F2] hover:bg-[#C9922E]/20 text-xs flex items-center justify-center cursor-pointer"
-                title="Voice Search"
-              >
-                🎙️
-              </button>
-              <button
-                onClick={() => handlePerformSearch(searchQuery)}
-                className="search-action-btn bg-[#B7592F] hover:bg-[#964724] text-white px-2.5 py-1.5 rounded-lg text-[11px] font-bold shadow-xs cursor-pointer"
-              >
-                Search
-              </button>
-            </div>
-          </div>
-
-          {/* Mobile Search Live Products Dropdown Popover */}
-          {isMobileSearchFocused && (
-            <div className="search-dropdown absolute left-4 right-4 top-full mt-1.5 bg-white border border-[#E4DAC8] rounded-2xl shadow-2xl p-3 space-y-2 animate-in fade-in z-50 max-h-[380px] overflow-y-auto">
-              {searchQuery.trim() ? (
-                <div>
-                  <div className="flex items-center justify-between pb-1.5 border-b border-[#E4DAC8]/60 text-[11px]">
-                    <span className="font-bold text-[#B7592F] truncate">
-                      "{searchQuery}" ({liveMatchedProducts.length} crafts)
-                    </span>
-                  </div>
-                  {liveMatchedProducts.length > 0 ? (
-                    <div className="divide-y divide-[#E4DAC8]/40 pt-1">
-                      {liveMatchedProducts.slice(0, 4).map((item) => {
-                        const pName = item.name[selectedLanguage] || item.name.en
+                  {/* Matched product quick results when typing */}
+                  {searchQuery.trim() && liveMatchedProducts.length > 0 && (
+                    <div className="bg-white border border-[#E4DAC8] rounded-xl shadow-lg p-2 max-h-56 overflow-y-auto space-y-1">
+                      {liveMatchedProducts.slice(0, 4).map((p) => {
+                        const pName = p.name[selectedLanguage] || p.name.en
                         return (
                           <div
-                            key={item.id}
+                            key={p.id}
                             onMouseDown={(e) => {
                               e.preventDefault()
-                              setSelectedProductForDetail(item)
-                              setIsMobileSearchFocused(false)
+                              setSelectedProductForDetail(p)
+                              setHeaderSearchExpanded(false)
                             }}
-                            className="flex items-center gap-2.5 py-2 cursor-pointer"
+                            className="flex items-center justify-between p-1.5 rounded-lg hover:bg-[#FAF7F2] cursor-pointer"
                           >
-                            <img
-                              src={item.image}
-                              alt={pName}
-                              className="w-10 h-10 rounded-lg object-cover shrink-0"
-                            />
-                            <div className="flex-1 min-w-0">
-                              <h5 className="text-xs font-bold text-[#241C15] truncate">
-                                <HighlightMatch text={pName} query={searchQuery} />
-                              </h5>
-                              <p className="text-[10px] text-[#8C7E6D] truncate">
-                                {item.artisan} • {item.category}
-                              </p>
+                            <div className="flex items-center gap-2 truncate">
+                              <img src={p.image} alt={pName} className="w-8 h-8 rounded object-cover" />
+                              <span className="text-xs text-[#241C15] font-medium truncate">{pName}</span>
                             </div>
-                            <span className="text-xs font-bold text-[#B7592F] font-serif shrink-0">
-                              ₹{item.price.toLocaleString("en-IN")}
-                            </span>
+                            <span className="text-xs font-bold text-[#B7592F] shrink-0 ml-2">₹{p.price}</span>
                           </div>
                         )
                       })}
-                      <div className="pt-1.5">
-                        <button
-                          onMouseDown={(e) => {
-                            e.preventDefault()
-                            handlePerformSearch(searchQuery)
-                          }}
-                          className="w-full text-center py-1.5 rounded-lg bg-[#FAF7F2] text-xs font-bold text-[#B7592F]"
-                        >
-                          View all {liveMatchedProducts.length} in catalog →
-                        </button>
-                      </div>
                     </div>
-                  ) : (
-                    <p className="py-4 text-center text-xs text-[#8C7E6D]">
-                      No crafts match "{searchQuery}"
-                    </p>
                   )}
                 </div>
-              ) : (
-                <div className="space-y-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#8C7E6D]">
-                    🔥 Popular Searches
-                  </span>
-                  <div className="grid grid-cols-2 gap-1">
-                    {TRENDING_SEARCHES.slice(0, 4).map((item) => (
-                      <button
-                        key={item.label}
-                        onMouseDown={(e) => {
-                          e.preventDefault()
-                          handlePerformSearch(item.query, item.category)
-                        }}
-                        className="text-left p-1.5 rounded-lg bg-[#FAF7F2] text-[11px] font-semibold text-[#241C15] truncate flex items-center gap-1.5"
-                      >
-                        <span>{item.icon}</span>
-                        <span className="truncate">{item.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Row 2: Category Navigation Strip (When in Buyer View) */}
-        {currentRole === "buyer" && (
-          <div className="category-strip bg-[#FAF7F2] border-t border-[#E4DAC8]/60 overflow-x-auto scrollbar-none py-2 px-4 sm:px-8">
-            <div className="max-w-7xl mx-auto flex items-center justify-between gap-3 min-w-max text-xs">
-              <div className="category-scroll flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5">
-                {[
-                  { id: "All", labelKey: "catAll", icon: "✨" },
-                  { id: "Pottery", labelKey: "catPottery", icon: "🏺" },
-                  { id: "Textile", labelKey: "catTextile", icon: "🧵" },
-                  { id: "Woodwork", labelKey: "catWoodwork", icon: "🪵" },
-                  { id: "Metalwork", labelKey: "catMetalwork", icon: "🪙" },
-                  { id: "Jewelry", labelKey: "catJewelry", icon: "💍" },
-                  { id: "Handicrafts", labelKey: "catHandicrafts", icon: "🪆" },
-                  {
-                    id: "Folk & Tribal Art",
-                    labelKey: "catFolkArt",
-                    icon: "🎨",
-                  },
-                  { id: "Bamboo & Cane", labelKey: "catBamboo", icon: "🎋" },
-                  { id: "Stone Craft", labelKey: "catStone", icon: "🏛️" },
-                  { id: "Leather Craft", labelKey: "catLeather", icon: "👞" },
-                ].map((cat) => (
-                  <button
-                    key={cat.id}
-                    onClick={() => {
-                      setSelectedCategory(cat.id)
-                    }}
-                    className={`px-3 py-1.5 rounded-full transition-all cursor-pointer font-medium flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
-                      selectedCategory === cat.id
-                        ? "bg-[#241C15] text-[#F7F2E9] font-bold shadow-xs"
-                        : "text-[#6B6255] hover:text-[#241C15] hover:bg-[#EFE8D8]"
-                    }`}
-                  >
-                    <span>{cat.icon}</span>
-                    <span>{translate(cat.labelKey, selectedLanguage)}</span>
-                  </button>
-                ))}
               </div>
-
-              <div className="category-extra hidden sm:flex items-center gap-2.5 text-[11.5px] text-[#6B6255] pl-4 border-l border-[#E4DAC8] shrink-0">
-                {/* Add Craft Button in Strip */}
-                <button
-                  onClick={() => setAddCraftModalOpen(true)}
-                  className="flex items-center gap-1 font-bold text-[#B7592F] hover:text-[#964724] bg-[#B7592F]/10 hover:bg-[#B7592F]/20 px-3 py-1 rounded-full transition-colors cursor-pointer border border-[#B7592F]/20 shrink-0"
-                >
-                  <span>✨</span>
-                  <span>+ Add Handmade Craft</span>
-                </button>
-                {/* AI Camera Price Scanner Shortcut */}
-                <button
-                  onClick={() => setCameraScannerOpen(true)}
-                  className="flex items-center gap-1 font-bold text-[#B7592F] hover:text-[#241C15] bg-[#B7592F]/10 px-3 py-0.5 rounded-full transition-colors cursor-pointer"
-                >
-                  <span>📷</span>
-                  <span>AI Camera Price Scanner</span>
-                </button>
-
-                <div className="flex items-center gap-1">
-                  <span className="text-[#B7592F]">📍</span>
-                  <span className="text-[#8C7E6D]">
-                    {translate("deliverTo", selectedLanguage)}
-                  </span>
-                  <strong className="text-[#241C15]">Pune 411007</strong>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+            )}
       </header>
 
       {/* ─── Toast Notification Overlay ────────────────────────────────────── */}
@@ -2131,499 +1786,333 @@ export default function App() {
         {/* ROLE VIEW 1: BUYER STOREFRONT                                     */}
         {/* ================================================================= */}
         {currentRole === "buyer" && (
-          <div className="space-y-10">
-            {/* Top Back Navigation to Editorial Stories */}
-            <div className="flex items-center justify-between pb-3 border-b border-[#E4DAC8]">
-              <button
-                onClick={() => {
-                  setBuyerExperience("landing")
-                  window.scrollTo({ top: 0, behavior: "smooth" })
-                }}
-                className="inline-flex items-center gap-2 text-xs font-semibold text-[#241C15] hover:text-[#B7592F] transition-colors cursor-pointer"
-              >
-                <span>←</span>
-                <span>Back to Stories & Editorial Overview</span>
-              </button>
-              <span className="text-xs text-[#8C7E6D] font-light">
-                Complete Artisan Collection ({filteredProducts.length} crafts)
-              </span>
-            </div>
-            {/* Hero Banner with Multi-Language Translation */}
-            <div className="hero-banner relative rounded-3xl overflow-hidden border border-[#E4DAC8] bg-[#241C15] text-white shadow-md min-h-[360px] sm:min-h-[420px] flex items-center">
-              <img
-                src="https://images.unsplash.com/photo-1507022787381-b30170b5ebf4?w=1600&h=700&fit=crop&auto=format"
-                alt="MoSJE Craft Heritage"
-                className="absolute inset-0 w-full h-full object-cover opacity-35 scale-105"
-              />
-              <div className="absolute inset-0 bg-gradient-to-r from-[#241C15] via-[#241C15]/90 to-transparent" />
-
-              <div className="hero-content relative z-10 p-8 sm:p-12 lg:p-16 max-w-4xl">
-                <span className="hero-tagline inline-block text-[#C9922E] text-[11px] font-bold tracking-[0.2em] uppercase bg-[#C9922E]/15 border border-[#C9922E]/30 px-3 py-0.5 rounded-full mb-3">
-                  {translate("heroTagline", selectedLanguage)}
+          <div className="space-y-12">
+            {/* ─── 1. HERO ─── */}
+            <section className="relative rounded-3xl overflow-hidden border border-[#E4DAC8] bg-[#FAF7F2] text-[#241C15] p-8 sm:p-14 lg:p-16">
+              <div className="max-w-2xl space-y-4">
+                <span className="text-[11px] font-semibold tracking-[0.25em] text-[#B7592F] uppercase block font-sans">
+                  CRAFTS WITH A STORY
                 </span>
-                <h1 className="hero-title text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight font-serif text-[#F7F2E9] mb-3">
-                  {translate("heroTitle", selectedLanguage)}
+                <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl text-[#241C15] font-normal leading-[1.15] tracking-tight">
+                  Made by hands. <br />
+                  Found with meaning.
                 </h1>
-                <p className="hero-subtitle text-xs sm:text-sm text-[#E4DAC8]/80 leading-relaxed mb-6 font-light max-w-2xl">
-                  {translate("heroSub", selectedLanguage)}
+                <p className="text-sm sm:text-base text-[#6B6255] font-normal leading-relaxed max-w-xl font-sans">
+                  Discover handmade pieces shaped by Indian craft traditions and the people who keep them alive.
                 </p>
-
-                {/* ─── GRAND HERO HERITAGE SEARCH BAR ─── */}
-                <div ref={heroSearchRef} className="hero-search-bar my-6 max-w-3xl relative z-20">
-                  <div className="relative flex flex-col sm:flex-row items-stretch sm:items-center bg-[#FDFBF7] p-2 sm:p-2.5 rounded-3xl sm:rounded-full border-2 border-[#C9922E]/40 focus-within:border-[#C9922E] focus-within:ring-4 focus-within:ring-[#C9922E]/20 shadow-2xl transition-all gap-2">
-                    {/* Category Selector */}
-                    <div className="relative shrink-0 sm:border-r sm:border-[#E4DAC8] pl-2 sm:pl-3 pr-2">
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-[#241C15]">
-                        <span className="text-[#C9922E] text-sm">🏺</span>
-                        <select
-                          value={selectedCategory}
-                          onChange={(e) => {
-                            setSelectedCategory(e.target.value)
-                            handlePerformSearch(searchQuery, e.target.value)
-                          }}
-                          className="appearance-none bg-transparent pr-6 py-1 text-xs font-bold text-[#241C15] cursor-pointer outline-none hover:text-[#B7592F]"
-                        >
-                          <option value="All">All Crafts</option>
-                          <option value="Pottery">Pottery & Clay</option>
-                          <option value="Textile">Textile & Handloom</option>
-                          <option value="Woodwork">Woodwork & Carving</option>
-                          <option value="Metalwork">Metalwork & Brass</option>
-                          <option value="Jewelry">Jewelry & Beads</option>
-                          <option value="Handicrafts">Handicrafts & Toys</option>
-                          <option value="Folk & Tribal Art">Folk & Tribal Art</option>
-                          <option value="Bamboo & Cane">Bamboo & Cane</option>
-                          <option value="Stone Craft">Stone Craft</option>
-                          <option value="Leather Craft">Leather Craft</option>
-                        </select>
-                        <span className="text-[9px] text-[#8C7E6D] -ml-4 pointer-events-none">
-                          ▼
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Big Input Area */}
-                    <div className="flex-1 flex items-center px-2 min-w-0">
-                      <span className="text-[#8C7E6D] text-lg mr-2 shrink-0">🔍</span>
-                      <input
-                        type="text"
-                        value={searchQuery}
-                        onFocus={() => setIsHeroSearchFocused(true)}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") handlePerformSearch(searchQuery)
-                        }}
-                        autoComplete="off"
-                        spellCheck={false}
-                        placeholder="Search Jaipur pottery, Banarasi silk, Kashmir wood, Dhokra art..."
-                        className="w-full text-sm sm:text-base font-medium text-[#241C15] placeholder:text-[#8C7E6D] bg-transparent outline-none"
-                      />
-                      {searchQuery && (
-                        <button
-                          onClick={() => setSearchQuery("")}
-                          className="p-1 text-[#8C7E6D] hover:text-[#241C15] text-xs font-bold cursor-pointer"
-                          title="Clear search"
-                        >
-                          ✕
-                        </button>
-                      )}
-                    </div>
-
-                    {/* Integrated Controls (Voice + Lens + Big Search Button) */}
-                    <div className="flex items-center gap-1.5 justify-end shrink-0 pt-1 sm:pt-0 border-t sm:border-t-0 border-[#E4DAC8]">
-                      <button
-                        onClick={() => setCameraScannerOpen(true)}
-                        title="AI Camera Price Scanner"
-                        className="w-10 h-10 rounded-full bg-[#FAF7F2] hover:bg-[#EFE8D8] text-[#241C15] hover:text-[#B7592F] flex items-center justify-center text-base transition-colors cursor-pointer shrink-0"
-                      >
-                        📷
-                      </button>
-                      <button
-                        onClick={() => setIsVoiceSearching(true)}
-                        title="Voice Search in Indian Languages"
-                        className="w-10 h-10 rounded-full bg-[#FAF7F2] hover:bg-[#EFE8D8] text-[#241C15] hover:text-[#B7592F] flex items-center justify-center text-base transition-colors cursor-pointer shrink-0"
-                      >
-                        🎙️
-                      </button>
-                      <button
-                        onClick={() => handlePerformSearch(searchQuery)}
-                        className="bg-[#B7592F] hover:bg-[#964724] text-white px-5 sm:px-6 py-2.5 sm:py-3 rounded-2xl sm:rounded-full text-xs sm:text-sm font-bold tracking-wide transition-all shadow-md flex items-center gap-2 cursor-pointer shrink-0"
-                      >
-                        <span>Search Crafts</span>
-                        <span>→</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Hero Live Matched Products Popover */}
-                  {isHeroSearchFocused && searchQuery.trim() && (
-                    <div className="absolute left-0 right-0 top-full mt-2 bg-white border border-[#E4DAC8] rounded-3xl shadow-2xl p-4 text-left space-y-3 animate-in fade-in z-50 max-h-[480px] overflow-y-auto">
-                      {/* Active Typed Query Banner */}
-                      <div className="flex items-center justify-between px-3 py-2 bg-[#FAF7F2] rounded-2xl border border-[#E4DAC8]">
-                        <div className="flex items-center gap-2 text-xs truncate">
-                          <span className="text-[#8C7E6D]">Searching for:</span>
-                          <strong className="text-[#B7592F] font-bold font-serif text-sm bg-white px-2.5 py-0.5 rounded-lg border border-[#E4DAC8] truncate">
-                            "{searchQuery}"
-                          </strong>
-                        </div>
-                        <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-[#B7592F] text-white shrink-0 ml-2">
-                          {liveMatchedProducts.length} crafts found
-                        </span>
-                      </div>
-
-                      {liveMatchedProducts.length > 0 ? (
-                        <div className="divide-y divide-[#E4DAC8]/40">
-                          {liveMatchedProducts.slice(0, 5).map((item) => {
-                            const pName = item.name[selectedLanguage] || item.name.en
-                            const pLoc = item.location[selectedLanguage] || item.location.en
-                            return (
-                              <div
-                                key={item.id}
-                                onMouseDown={(e) => {
-                                  e.preventDefault()
-                                  setSelectedProductForDetail(item)
-                                  setIsHeroSearchFocused(false)
-                                }}
-                                className="flex items-center gap-3.5 p-2.5 rounded-2xl hover:bg-[#FAF7F2] transition-colors cursor-pointer group"
-                              >
-                                <img
-                                  src={item.image}
-                                  alt={pName}
-                                  className="w-13 h-13 rounded-2xl object-cover border border-[#E4DAC8] shrink-0 group-hover:scale-105 transition-transform"
-                                  onError={(e) => {
-                                    e.currentTarget.onerror = null
-                                    e.currentTarget.src =
-                                      "https://images.unsplash.com/photo-1590736969955-71cc94801759?w=800&h=800&fit=crop&auto=format"
-                                  }}
-                                />
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <h4 className="text-sm font-bold text-[#241C15] group-hover:text-[#B7592F] transition-colors truncate">
-                                      <HighlightMatch text={pName} query={searchQuery} />
-                                    </h4>
-                                    {item.gi_tagged && (
-                                      <span className="shrink-0 text-[9px] font-bold bg-[#C9922E]/20 text-[#241C15] px-2 py-0.5 rounded-full">
-                                        GI Certified
-                                      </span>
-                                    )}
-                                  </div>
-                                  <p className="text-xs text-[#8C7E6D] truncate">
-                                    by <span className="font-semibold text-[#6B6255]">{item.artisan}</span> • {pLoc.split(",")[0]}
-                                  </p>
-                                  <span className="text-[10px] text-[#8C7E6D] bg-[#FAF7F2] px-2 py-0.5 rounded-md border border-[#E4DAC8]/60">
-                                    {item.category}
-                                  </span>
-                                </div>
-                                <div className="text-right shrink-0 flex flex-col items-end gap-1">
-                                  <span className="text-sm font-bold text-[#B7592F] font-serif block">
-                                    ₹{item.price.toLocaleString("en-IN")}
-                                  </span>
-                                  <button
-                                    onMouseDown={(e) => {
-                                      e.preventDefault()
-                                      e.stopPropagation()
-                                      handleAddToCart(item)
-                                    }}
-                                    className="px-2.5 py-1 rounded-lg bg-[#241C15] hover:bg-[#3A2C20] text-[#F7F2E9] text-[11px] font-bold transition-colors cursor-pointer"
-                                  >
-                                    + Add to Bag
-                                  </button>
-                                </div>
-                              </div>
-                            )
-                          })}
-
-                          <div className="pt-2.5">
-                            <button
-                              onMouseDown={(e) => {
-                                e.preventDefault()
-                                handlePerformSearch(searchQuery)
-                              }}
-                              className="w-full text-center py-2.5 rounded-2xl bg-[#241C15] hover:bg-[#3A2C20] text-xs font-bold text-[#F7F2E9] transition-colors cursor-pointer flex items-center justify-center gap-2"
-                            >
-                              <span>View all {liveMatchedProducts.length} crafts in catalog</span>
-                              <span>→</span>
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="py-8 text-center space-y-1.5">
-                          <span className="text-3xl">🏺</span>
-                          <p className="text-sm font-bold text-[#241C15]">
-                            No authentic crafts found matching "{searchQuery}"
-                          </p>
-                          <p className="text-xs text-[#8C7E6D]">
-                            Try searching for terms like "Jaipur pottery", "Banarasi silk", "Kashmir wood", or "Brass".
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Trending Search Chips */}
-                  <div className="hero-trending-chips mt-3 flex flex-wrap items-center gap-2 text-xs">
-                    <span className="text-[#C9922E] font-bold text-[11px] uppercase tracking-wider flex items-center gap-1">
-                      <span>🔥</span> Popular:
-                    </span>
-                    {TRENDING_SEARCHES.map((item) => (
-                      <button
-                        key={item.label}
-                        onClick={() => handlePerformSearch(item.query, item.category)}
-                        className="bg-white/15 hover:bg-white/30 backdrop-blur-sm border border-white/20 text-[#F7F2E9] hover:text-white px-3 py-1 rounded-full text-[11px] font-medium transition-colors cursor-pointer flex items-center gap-1"
-                      >
-                        <span>{item.icon}</span>
-                        <span>{item.label}</span>
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Active Search Results Indicator */}
-                  {searchQuery && (
-                    <div className="hero-search-indicator mt-2.5 flex items-center justify-between bg-[#C9922E]/20 border border-[#C9922E]/40 px-3.5 py-1.5 rounded-xl text-xs text-[#F7F2E9]">
-                      <span>
-                        Showing <strong>{filteredProducts.length}</strong> crafts matching "{searchQuery}"
-                      </span>
-                      <button
-                        onClick={() => setSearchQuery("")}
-                        className="text-[#C9922E] hover:text-white font-bold underline cursor-pointer"
-                      >
-                        Reset search
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                <div className="hero-cta-buttons flex flex-wrap items-center gap-3">
+                <div className="pt-3">
                   <button
                     onClick={() => {
-                      const el = document.getElementById("craft-catalog")
+                      const el = document.getElementById("explore-by-craft") || document.getElementById("craft-catalog")
                       el?.scrollIntoView({ behavior: "smooth" })
                     }}
-                    className="hero-cta-primary bg-[#C9922E] hover:bg-[#DCA33C] text-[#241C15] px-6 py-2.5 rounded-full text-xs sm:text-sm font-bold tracking-wide transition-colors shadow-sm flex items-center gap-2 cursor-pointer"
+                    className="inline-flex items-center gap-2 bg-[#241C15] hover:bg-[#3A2C20] text-[#FDFBF7] px-7 py-3.5 rounded-xl text-xs sm:text-sm font-medium tracking-wide transition-all shadow-xs hover:shadow cursor-pointer font-sans"
                   >
-                    <span>{translate("ctaExplore", selectedLanguage)}</span>
+                    <span>Explore Crafts</span>
                     <span>→</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setTrackingLookupOrderId(null)
-                      setCustomerOrdersModalOpen(true)
-                    }}
-                    className="hero-cta-secondary bg-white/15 hover:bg-white/25 border border-white/30 text-white px-5 py-2.5 rounded-full text-xs sm:text-sm font-semibold transition-colors cursor-pointer flex items-center gap-2"
-                  >
-                    <span>🚚</span>
-                    <span>Track Delivery</span>
-                  </button>
-                  <button
-                    onClick={() => setCameraScannerOpen(true)}
-                    className="hero-cta-secondary bg-white/15 hover:bg-white/25 border border-white/30 text-white px-5 py-2.5 rounded-full text-xs sm:text-sm font-semibold transition-colors cursor-pointer flex items-center gap-2"
-                  >
-                    <span>📷</span>
-                    <span>AI Camera Price Scanner</span>
-                  </button>
-                  <button
-                    onClick={() => setAddCraftModalOpen(true)}
-                    className="hero-cta-secondary bg-[#B7592F] hover:bg-[#964724] text-white px-5 py-2.5 rounded-full text-xs sm:text-sm font-semibold transition-colors cursor-pointer flex items-center gap-1.5 shadow-xs"
-                  >
-                    <span>✨</span>
-                    <span>Add Handmade Craft</span>
-                  </button>
-                  <button
-                    onClick={() => setSellerCameraOpen(true)}
-                    className="hero-cta-secondary bg-white/10 hover:bg-white/20 border border-white/25 text-[#F7F2E9] px-4 py-2.5 rounded-full text-xs sm:text-sm font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
-                  >
-                    <span>📸</span>
-                    <span>Studio Lens</span>
                   </button>
                 </div>
               </div>
-            </div>
+            </section>
 
-            {/* Impact Highlights Strip */}
-            <div className="impact-strip grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {[
-                {
-                  title: translate("valPropDirect", selectedLanguage),
-                  desc: translate("valPropDirectSub", selectedLanguage),
-                  icon: "🏛️",
-                },
-                {
-                  title: translate("valPropCrafts", selectedLanguage),
-                  desc: translate("valPropCraftsSub", selectedLanguage),
-                  icon: "🏺",
-                },
-                {
-                  title: translate("valPropVoice", selectedLanguage),
-                  desc: translate("valPropVoiceSub", selectedLanguage),
-                  icon: "🎙️",
-                },
-                {
-                  title: translate("valPropOtp", selectedLanguage),
-                  desc: translate("valPropOtpSub", selectedLanguage),
-                  icon: "🔐",
-                },
-              ].map((b, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-3 p-4 rounded-2xl border border-[#E4DAC8] bg-[#FAF7F2] shadow-xs"
-                >
-                  <span className="text-2xl flex-none bg-[#EFE8D8] p-2.5 rounded-xl">
-                    {b.icon}
-                  </span>
-                  <div>
-                    <h3 className="text-xs sm:text-sm font-bold text-[#241C15]">
-                      {b.title}
-                    </h3>
-                    <p className="text-[11px] text-[#6B6255] mt-0.5">
-                      {b.desc}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* ─── Marketplace Catalog Section ─── */}
-            <div id="craft-catalog" className="pt-2 space-y-6">
-              <div className="flex flex-col gap-4 pb-4 border-b border-[#E4DAC8]">
-                <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-                  <div>
-                    <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#B7592F]">
-                      {selectedCategory === "All"
-                        ? translate("catAll", selectedLanguage)
-                        : selectedCategory === "Pottery"
-                          ? translate("catPottery", selectedLanguage)
-                          : selectedCategory === "Textile"
-                            ? translate("catTextile", selectedLanguage)
-                            : selectedCategory === "Woodwork"
-                              ? translate("catWoodwork", selectedLanguage)
-                              : selectedCategory === "Metalwork"
-                                ? translate("catMetalwork", selectedLanguage)
-                                : selectedCategory === "Jewelry"
-                                  ? translate("catJewelry", selectedLanguage)
-                                  : selectedCategory === "Handicrafts"
-                                    ? translate(
-                                        "catHandicrafts",
-                                        selectedLanguage,
-                                      )
-                                    : selectedCategory === "Folk & Tribal Art"
-                                      ? translate(
-                                          "catFolkArt",
-                                          selectedLanguage,
-                                        )
-                                      : selectedCategory === "Bamboo & Cane"
-                                        ? translate(
-                                            "catBamboo",
-                                            selectedLanguage,
-                                          )
-                                        : selectedCategory === "Stone Craft"
-                                          ? translate(
-                                              "catStone",
-                                              selectedLanguage,
-                                            )
-                                          : translate(
-                                              "catLeather",
-                                              selectedLanguage,
-                                            )}{" "}
-                      • 100% Certified Authentic Indian Heritage
-                    </span>
-                    <h2 className="text-2xl font-bold text-[#241C15] font-serif mt-0.5">
-                      {translate("catalogHeading", selectedLanguage)} (
-                      {filteredProducts.length}{" "}
-                      {translate("catalogItemsCount", selectedLanguage)})
-                    </h2>
-                  </div>
-
-                  {/* Top Actions: Add Craft button & Sort selector */}
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <button
-                      onClick={() => setAddCraftModalOpen(true)}
-                      className="catalog-add-craft-btn flex items-center gap-1.5 bg-[#B7592F] hover:bg-[#964724] text-white px-3.5 py-1.5 rounded-full text-xs font-bold transition-all shadow-xs cursor-pointer"
-                    >
-                      <span>✨</span>
-                      <span>+ Add Handmade Craft</span>
-                    </button>
-
-                    <div className="flex items-center gap-2 text-xs">
-                      <span className="text-[#8C7E6D]">
-                        {translate("sortBy", selectedLanguage)}:
-                      </span>
-                      <select
-                        value={sortBy}
-                        onChange={(e) => setSortBy(e.target.value as any)}
-                        className="p-1.5 rounded-xl border border-[#E4DAC8] bg-white text-xs font-semibold text-[#241C15] outline-none"
-                      >
-                        <option value="featured">
-                          {translate("sortFeatured", selectedLanguage)}
-                        </option>
-                        <option value="price-asc">
-                          {translate("sortPriceAsc", selectedLanguage)}
-                        </option>
-                        <option value="price-desc">
-                          {translate("sortPriceDesc", selectedLanguage)}
-                        </option>
-                        <option value="b2b-price">
-                          {translate("sortRating", selectedLanguage)}
-                        </option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Sub-filter Category Quick Pills */}
-                <div className="catalog-sub-filters flex items-center gap-2 pt-1 overflow-x-auto text-xs scrollbar-none">
-                  {[
-                    { id: "All", labelKey: "catAll", icon: "✨" },
-                    { id: "Pottery", labelKey: "catPottery", icon: "🏺" },
-                    { id: "Textile", labelKey: "catTextile", icon: "🧵" },
-                    { id: "Woodwork", labelKey: "catWoodwork", icon: "🪵" },
-                    { id: "Metalwork", labelKey: "catMetalwork", icon: "🪙" },
-                    { id: "Jewelry", labelKey: "catJewelry", icon: "💍" },
-                    {
-                      id: "Handicrafts",
-                      labelKey: "catHandicrafts",
-                      icon: "🪆",
-                    },
-                    {
-                      id: "Folk & Tribal Art",
-                      labelKey: "catFolkArt",
-                      icon: "🎨",
-                    },
-                    { id: "Bamboo & Cane", labelKey: "catBamboo", icon: "🎋" },
-                    { id: "Stone Craft", labelKey: "catStone", icon: "🏛️" },
-                    { id: "Leather Craft", labelKey: "catLeather", icon: "👞" },
-                  ].map((tab) => {
-                    const count =
-                      tab.id === "All"
-                        ? products.filter(
-                            (p) =>
-                              !p.isMaterial && p.category !== "Craft Materials",
-                          ).length
-                        : products.filter(
-                            (p) => p.category === tab.id && !p.isMaterial,
-                          ).length
-                    return (
+            {/* ─── 2. CATEGORY NAVIGATION ─── */}
+            <div className="category-editorial-row bg-[#FAF7F2] border-y border-[#E4DAC8] py-0 px-4 sm:px-6 rounded-2xl">
+              <nav
+                aria-label="Craft Categories"
+                className="flex items-center gap-5 sm:gap-7 overflow-x-auto scrollbar-none py-3.5 text-xs sm:text-[13px] font-sans"
+              >
+                {[
+                  { id: "All", label: "All Crafts" },
+                  { id: "Pottery", label: "Pottery" },
+                  { id: "Textile", label: "Textiles" },
+                  { id: "Woodwork", label: "Woodwork" },
+                  { id: "Metalwork", label: "Metalwork" },
+                  { id: "Jewelry", label: "Jewelry" },
+                  { id: "Handicrafts", label: "Decor" },
+                  { id: "Folk & Tribal Art", label: "Folk Art" },
+                  { id: "Bamboo & Cane", label: "Bamboo" },
+                  { id: "Stone Craft", label: "Stone" },
+                  { id: "Leather Craft", label: "Leather" },
+                ].map((cat, idx, arr) => {
+                  const isActive = selectedCategory === cat.id
+                  return (
+                    <React.Fragment key={cat.id}>
                       <button
-                        key={tab.id}
-                        onClick={() => setSelectedCategory(tab.id)}
-                        className={`px-3.5 py-1.5 rounded-full transition-all cursor-pointer font-semibold flex items-center gap-1.5 shrink-0 ${
-                          selectedCategory === tab.id
-                            ? "bg-[#241C15] text-[#F7F2E9] shadow-xs"
-                            : "bg-white border border-[#E4DAC8] text-[#6B6255] hover:bg-[#FAF7F2] hover:text-[#241C15]"
+                        onClick={() => {
+                          setSelectedCategory(cat.id)
+                          handlePerformSearch(searchQuery, cat.id)
+                        }}
+                        className={`whitespace-nowrap transition-colors cursor-pointer py-1 ${
+                          isActive
+                            ? "text-[#B7592F] font-semibold border-b-2 border-[#B7592F] -mb-[2px]"
+                            : "text-[#241C15] hover:text-[#B7592F] font-normal"
                         }`}
                       >
-                        <span>{tab.icon}</span>
-                        <span>{translate(tab.labelKey, selectedLanguage)}</span>
-                        <span
-                          className={`text-[10px] px-1.5 rounded-full font-bold ${
-                            selectedCategory === tab.id
-                              ? "bg-[#C9922E] text-[#241C15]"
-                              : "bg-[#EFE8D8] text-[#6B6255]"
-                          }`}
-                        >
-                          {count}
-                        </span>
+                        {cat.label}
                       </button>
-                    )
-                  })}
+                      {idx < arr.length - 1 && (
+                        <span className="text-[#E4DAC8] text-xs select-none">·</span>
+                      )}
+                    </React.Fragment>
+                  )
+                })}
+              </nav>
+            </div>
+
+            {/* ─── 3. SEARCH ─── */}
+            <div ref={heroSearchRef} className="max-w-xl mx-auto w-full relative">
+              <div className="relative flex items-center bg-white border border-[#E4DAC8] rounded-xl px-4 py-3 shadow-xs hover:border-[#B7592F]/60 focus-within:border-[#B7592F] focus-within:ring-2 focus-within:ring-[#B7592F]/15 transition-all">
+                <svg
+                  className="w-4 h-4 text-[#8C7E6D] shrink-0 mr-3"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.75}
+                    d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z"
+                  />
+                </svg>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onFocus={() => setIsHeroSearchFocused(true)}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handlePerformSearch(searchQuery)
+                  }}
+                  autoComplete="off"
+                  spellCheck={false}
+                  placeholder="Search crafts"
+                  className="w-full text-xs sm:text-sm text-[#241C15] placeholder:text-[#8C7E6D] bg-transparent outline-none font-sans"
+                />
+                {searchQuery ? (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="p-1 text-[#8C7E6D] hover:text-[#241C15] text-xs font-semibold cursor-pointer shrink-0"
+                    title="Clear search"
+                  >
+                    ✕
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-1 shrink-0 text-[#8C7E6D]">
+                    <button
+                      onClick={() => setCameraScannerOpen(true)}
+                      title="AI Camera Price Scanner"
+                      className="p-1.5 hover:text-[#241C15] hover:bg-[#FAF7F2] rounded-lg transition-colors cursor-pointer text-xs"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => setIsVoiceSearching(true)}
+                      title="Voice search"
+                      className="p-1.5 hover:text-[#241C15] hover:bg-[#FAF7F2] rounded-lg transition-colors cursor-pointer text-xs"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Hero Live Matched Products Popover */}
+              {isHeroSearchFocused && searchQuery.trim() && (
+                <div className="absolute left-0 right-0 top-full mt-2 bg-white border border-[#E4DAC8] rounded-2xl shadow-xl p-4 text-left space-y-3 animate-in fade-in z-50 max-h-[420px] overflow-y-auto">
+                  <div className="flex items-center justify-between px-3 py-1.5 bg-[#FAF7F2] rounded-xl border border-[#E4DAC8]">
+                    <span className="text-xs text-[#6B6255]">
+                      Matching <strong>"{searchQuery}"</strong>
+                    </span>
+                    <span className="text-[11px] font-semibold text-[#B7592F]">
+                      {liveMatchedProducts.length} crafts
+                    </span>
+                  </div>
+                  {liveMatchedProducts.length > 0 ? (
+                    <div className="divide-y divide-[#E4DAC8]/40">
+                      {liveMatchedProducts.slice(0, 5).map((item) => {
+                        const pName = item.name[selectedLanguage] || item.name.en
+                        const pLoc = item.location[selectedLanguage] || item.location.en
+                        return (
+                          <div
+                            key={item.id}
+                            onMouseDown={(e) => {
+                              e.preventDefault()
+                              setSelectedProductForDetail(item)
+                              setIsHeroSearchFocused(false)
+                            }}
+                            className="flex items-center gap-3 p-2 rounded-xl hover:bg-[#FAF7F2] transition-colors cursor-pointer group"
+                          >
+                            <img
+                              src={item.image}
+                              alt={pName}
+                              className="w-12 h-12 rounded-xl object-cover border border-[#E4DAC8] shrink-0"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <h4 className="text-xs font-semibold text-[#241C15] group-hover:text-[#B7592F] transition-colors truncate">
+                                <HighlightMatch text={pName} query={searchQuery} />
+                              </h4>
+                              <p className="text-[11px] text-[#8C7E6D] truncate">
+                                {item.artisan} • {pLoc.split(",")[0]}
+                              </p>
+                            </div>
+                            <span className="text-xs font-semibold text-[#B7592F] shrink-0">
+                              ₹{item.price.toLocaleString("en-IN")}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  ) : (
+                    <div className="py-4 text-center text-xs text-[#8C7E6D]">
+                      No crafts found matching "{searchQuery}"
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* ─── 4. POPULAR CRAFTS -> EXPLORE BY CRAFT ─── */}
+            <section id="explore-by-craft" className="space-y-6 pt-2">
+              <div className="flex items-baseline justify-between border-b border-[#E4DAC8] pb-3">
+                <h3 className="font-serif text-2xl sm:text-3xl text-[#241C15] font-normal tracking-tight">
+                  Explore by Craft
+                </h3>
+                <span className="text-xs text-[#8C7E6D] font-sans">
+                  Living artisan traditions
+                </span>
+              </div>
+
+              {/* Large Product Imagery & Minimal Labels Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
+                {[
+                  {
+                    craftLabel: "Blue Pottery",
+                    locationLabel: "Jaipur",
+                    category: "Pottery",
+                    product: products.find((p) => p.category === "Pottery"),
+                  },
+                  {
+                    craftLabel: "Banarasi Weave",
+                    locationLabel: "Varanasi",
+                    category: "Textile",
+                    product: products.find((p) => p.category === "Textile"),
+                  },
+                  {
+                    craftLabel: "Walnut Woodwork",
+                    locationLabel: "Kashmir",
+                    category: "Woodwork",
+                    product: products.find((p) => p.category === "Woodwork"),
+                  },
+                  {
+                    craftLabel: "Dhokra Metalwork",
+                    locationLabel: "Bastar",
+                    category: "Metalwork",
+                    product: products.find((p) => p.category === "Metalwork"),
+                  },
+                ].map((item, idx) => {
+                  if (!item.product) return null
+                  const prod = item.product
+                  return (
+                    <div
+                      key={idx}
+                      onClick={() => {
+                        setSelectedCategory(item.category)
+                        setSelectedProductForDetail(prod)
+                      }}
+                      className="group cursor-pointer flex flex-col space-y-2.5"
+                    >
+                      <div className="relative aspect-4/5 overflow-hidden rounded-2xl bg-[#FAF7F2] border border-[#E4DAC8]">
+                        <img
+                          src={prod.image}
+                          alt={item.craftLabel}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          onError={(e) => {
+                            e.currentTarget.onerror = null
+                            e.currentTarget.src =
+                              "https://images.unsplash.com/photo-1590736969955-71cc94801759?w=800&h=800&fit=crop&auto=format"
+                          }}
+                        />
+                      </div>
+                      <div className="space-y-0.5">
+                        <h4 className="text-sm sm:text-base font-serif font-normal text-[#241C15] group-hover:text-[#B7592F] transition-colors">
+                          {item.craftLabel}
+                        </h4>
+                        <p className="text-xs text-[#8C7E6D] font-sans">
+                          {item.locationLabel}
+                        </p>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </section>
+
+            {/* ─── 5. CATALOG SECTION (MORE PRODUCTS) ─── */}
+            <div id="craft-catalog" className="pt-6 space-y-6">
+              <div className="flex flex-col gap-4 pb-4 border-b border-[#E4DAC8]">
+                <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-4">
+                  <div>
+                    <h2 className="text-2xl sm:text-3xl font-normal text-[#241C15] font-serif">
+                      {selectedCategory === "All"
+                        ? "All Crafts"
+                        : selectedCategory === "Pottery"
+                          ? "Pottery"
+                          : selectedCategory === "Textile"
+                            ? "Textiles"
+                            : selectedCategory === "Woodwork"
+                              ? "Woodwork"
+                              : selectedCategory === "Metalwork"
+                                ? "Metalwork"
+                                : selectedCategory === "Jewelry"
+                                  ? "Jewelry"
+                                  : selectedCategory === "Handicrafts"
+                                    ? "Decor"
+                                    : selectedCategory === "Folk & Tribal Art"
+                                      ? "Folk Art"
+                                      : selectedCategory === "Bamboo & Cane"
+                                        ? "Bamboo"
+                                        : selectedCategory === "Stone Craft"
+                                          ? "Stone"
+                                          : "Leather"}{" "}
+                      <span className="text-lg text-[#8C7E6D] font-sans font-light">
+                        ({filteredProducts.length})
+                      </span>
+                    </h2>
+                    <p className="text-xs text-[#8C7E6D] font-sans mt-0.5">
+                      Authentic handmade pieces direct from master artisan guilds
+                    </p>
+                  </div>
+
+                  {/* Sort selector */}
+                  <div className="flex items-center gap-2 text-xs font-sans">
+                    <span className="text-[#8C7E6D]">
+                      {translate("sortBy", selectedLanguage)}:
+                    </span>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as any)}
+                      className="p-1.5 rounded-lg border border-[#E4DAC8] bg-white text-xs font-medium text-[#241C15] outline-none cursor-pointer"
+                    >
+                      <option value="featured">
+                        {translate("sortFeatured", selectedLanguage)}
+                      </option>
+                      <option value="price-asc">
+                        {translate("sortPriceAsc", selectedLanguage)}
+                      </option>
+                      <option value="price-desc">
+                        {translate("sortPriceDesc", selectedLanguage)}
+                      </option>
+                      <option value="b2b-price">
+                        {translate("sortRating", selectedLanguage)}
+                      </option>
+                    </select>
+                  </div>
                 </div>
 
                 {searchQuery.trim() && (
@@ -2682,62 +2171,12 @@ export default function App() {
                             }}
                           />
                           {product.gi_tagged && (
-                            <span className="absolute top-3 right-3 bg-[#C9922E] text-[#241C15] text-[10px] font-bold px-2 py-0.5 rounded-full shadow-xs">
-                              ✓ GI Certified
+                            <span className="absolute top-2.5 right-2.5 bg-[#C9922E] text-[#241C15] text-[9.5px] font-semibold px-2 py-0.5 rounded-md shadow-xs">
+                              GI Certified
                             </span>
                           )}
-                          <span className="absolute bottom-2 left-2 text-[9.5px] font-bold px-2 py-0.5 rounded-full shadow-xs bg-[#241C15]/85 text-[#F7F2E9]">
-                            {product.category === "Pottery"
-                              ? "🏺 " +
-                                translate("catPottery", selectedLanguage)
-                              : product.category === "Textile"
-                                ? "🧵 " +
-                                  translate("catTextile", selectedLanguage)
-                                : product.category === "Woodwork"
-                                  ? "🪵 " +
-                                    translate("catWoodwork", selectedLanguage)
-                                  : product.category === "Metalwork"
-                                    ? "🪙 " +
-                                      translate(
-                                        "catMetalwork",
-                                        selectedLanguage,
-                                      )
-                                    : product.category === "Jewelry"
-                                      ? "💍 " +
-                                        translate(
-                                          "catJewelry",
-                                          selectedLanguage,
-                                        )
-                                      : product.category === "Handicrafts"
-                                        ? "🪆 " +
-                                          translate(
-                                            "catHandicrafts",
-                                            selectedLanguage,
-                                          )
-                                        : product.category ===
-                                            "Folk & Tribal Art"
-                                          ? "🎨 " +
-                                            translate(
-                                              "catFolkArt",
-                                              selectedLanguage,
-                                            )
-                                          : product.category === "Bamboo & Cane"
-                                            ? "🎋 " +
-                                              translate(
-                                                "catBamboo",
-                                                selectedLanguage,
-                                              )
-                                            : product.category === "Stone Craft"
-                                              ? "🏛️ " +
-                                                translate(
-                                                  "catStone",
-                                                  selectedLanguage,
-                                                )
-                                              : "👞 " +
-                                                translate(
-                                                  "catLeather",
-                                                  selectedLanguage,
-                                                )}
+                          <span className="absolute bottom-2.5 left-2.5 text-[10px] font-medium px-2 py-0.5 rounded-md bg-[#241C15]/85 text-[#F7F2E9] tracking-wide font-sans">
+                            {product.category}
                           </span>
                         </div>
 
@@ -2745,31 +2184,27 @@ export default function App() {
                         <div className="p-4 space-y-2">
                           <h3
                             onClick={() => setSelectedProductForDetail(product)}
-                            className="text-base font-bold font-serif text-[#241C15] line-clamp-2 group-hover:text-[#B7592F] transition-colors cursor-pointer"
+                            className="text-base font-normal font-serif text-[#241C15] line-clamp-2 group-hover:text-[#B7592F] transition-colors cursor-pointer"
                           >
                             <HighlightMatch text={pName} query={searchQuery} />
                           </h3>
-                          <p className="text-xs text-[#6B6255] line-clamp-2 leading-relaxed">
+                          <p className="text-xs text-[#6B6255] line-clamp-2 leading-relaxed font-sans">
                             {pDesc}
                           </p>
 
                           {/* Price in INR */}
                           <div className="flex items-baseline justify-between pt-1">
                             <div>
-                              <span className="text-xl font-bold text-[#241C15] font-serif">
+                              <span className="text-xl font-normal text-[#241C15] font-serif">
                                 {fmt(product.price)}
                               </span>
-                              <span className="text-[10px] text-[#8C7E6D] block">
-                                {translate(
-                                  "valPropDirectSub",
-                                  selectedLanguage,
-                                )}
+                              <span className="text-[10px] text-[#8C7E6D] block font-sans">
+                                Direct to artisan
                               </span>
                             </div>
 
-                            <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
-                              {product.stockQuantity || 12}{" "}
-                              {translate("inStockBadge", selectedLanguage)}
+                            <span className="text-[10px] font-medium text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md font-sans">
+                              {product.stockQuantity || 12} in stock
                             </span>
                           </div>
                         </div>
@@ -2780,7 +2215,7 @@ export default function App() {
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => handleBuyNow(product)}
-                            className="flex-1 rounded-full bg-[#241C15] hover:bg-[#3A2C20] py-2.5 text-xs font-bold text-[#F7F2E9] transition-colors shadow-xs cursor-pointer text-center"
+                            className="flex-1 rounded-xl bg-[#241C15] hover:bg-[#3A2C20] py-2.5 text-xs font-medium text-[#F7F2E9] transition-colors shadow-xs cursor-pointer text-center font-sans"
                           >
                             {translate("buyNow", selectedLanguage)}
                           </button>
@@ -2788,9 +2223,9 @@ export default function App() {
                           <button
                             onClick={() => handleAddToCart(product)}
                             title="Add to Bag"
-                            className="h-9 w-9 rounded-full border border-[#E4DAC8] bg-[#FAF7F2] hover:bg-[#EFE8D8] flex items-center justify-center text-[#241C15] transition-colors shrink-0 cursor-pointer"
+                            className="h-9 px-3 rounded-xl border border-[#E4DAC8] bg-[#FAF7F2] hover:bg-[#EFE8D8] text-xs font-medium text-[#241C15] transition-colors shrink-0 cursor-pointer font-sans"
                           >
-                            🛍️
+                            + Bag
                           </button>
 
                           <button
@@ -2854,10 +2289,15 @@ export default function App() {
               products={products}
               orders={customerOrders}
               onOpenUploadModal={() => setSellerCameraOpen(true)}
-              onOpenEditProfile={() => setSellerAuthModalOpen(true)}
+              onOpenEditProfile={() => {
+                setSellerAuthModalMode("edit")
+                setSellerAuthModalOpen(true)
+              }}
               onUpdateOrderStatus={handleUpdateOrderStatus}
               onSwitchToBuyer={() => setCurrentRole("buyer")}
               showToast={showToast}
+              activeTab={artisanStudioActiveTab}
+              onTabChange={(t) => setArtisanStudioActiveTab(t)}
             />
           </div>
         )}
@@ -3404,9 +2844,12 @@ export default function App() {
             })
             .catch(() => {})
 
-          // Immediately switch to Buyer Marketplace
-          setCurrentRole("buyer")
-          window.scrollTo({ top: 0, behavior: "smooth" })
+          if (currentRole !== "artisan") {
+            setCurrentRole("buyer")
+            window.scrollTo({ top: 0, behavior: "smooth" })
+          } else {
+            showToast(`Craft added to your studio catalog!`)
+          }
         }}
         showToast={showToast}
       />
@@ -3492,12 +2935,39 @@ export default function App() {
         isOpen={sellerAuthModalOpen}
         onClose={() => setSellerAuthModalOpen(false)}
         currentSeller={currentSeller}
+        initialMode={sellerAuthModalMode}
         onSaveSeller={(s) => {
           setCurrentSeller(s)
           try {
             localStorage.setItem("simplificant_seller", JSON.stringify(s))
           } catch {}
         }}
+        onArtistAuthenticated={(artisanUser, sellerPartial) => {
+          setCurrentUser(artisanUser)
+          setCurrentRole("artisan")
+          setIsLoggedIn(true)
+          try {
+            localStorage.setItem("simplificant_is_logged_in", "true")
+            localStorage.setItem(
+              "simplificant_current_user_v5",
+              JSON.stringify(artisanUser),
+            )
+          } catch {}
+          if (sellerPartial) {
+            setCurrentSeller((prev) => ({
+              ...prev,
+              ...sellerPartial,
+              id: artisanUser.id || prev.id,
+              name: artisanUser.name || prev.name,
+              phone: artisanUser.mobile || prev.phone,
+            }))
+          }
+          setBuyerExperience("catalog")
+          setSellerAuthModalOpen(false)
+          window.scrollTo({ top: 0, behavior: "smooth" })
+        }}
+        onRegisterUser={handleRegisterUser}
+        allUsers={activeUsers}
         showToast={showToast}
       />
 
@@ -3519,7 +2989,7 @@ export default function App() {
         onAdvanceOrderStage={handleAdvanceOrderStage}
         onOpenLogin={() => {
           setCustomerOrdersModalOpen(false)
-          setUniversalAuthModalOpen(true)
+          setBuyerAuthModalOpen(true)
         }}
         onReorder={(order) => {
           const orig = products.find((p) => p.id === order.productId)
@@ -3562,6 +3032,58 @@ export default function App() {
         selectedLanguage={selectedLanguage}
         allUsers={activeUsers}
         targetRoleHint={authTargetRoleHint}
+      />
+
+      {/* ─── MODAL: DEDICATED BUYER AUTH MODAL ─────────────────────────────── */}
+      <BuyerAuthModal
+        isOpen={buyerAuthModalOpen}
+        onClose={() => setBuyerAuthModalOpen(false)}
+        onLoginSuccess={(user, role) => {
+          setCurrentUser(user)
+          setCurrentRole(role)
+          setIsLoggedIn(true)
+          try {
+            localStorage.setItem("simplificant_is_logged_in", "true")
+            localStorage.setItem("simplificant_current_user_v5", JSON.stringify(user))
+          } catch {
+            // ignore
+          }
+          setBuyerAuthModalOpen(false)
+          showToast(`Welcome back, ${user.name}`)
+        }}
+        onRegisterUser={handleRegisterUser}
+        allUsers={activeUsers}
+        showToast={showToast}
+      />
+
+      {/* ─── MODAL: DEDICATED ARTIST AUTH MODAL ────────────────────────────── */}
+      <ArtistAuthModal
+        isOpen={artistAuthModalOpen}
+        onClose={() => setArtistAuthModalOpen(false)}
+        onArtistAuthenticated={(artisanUser, sellerPartial) => {
+          setCurrentUser(artisanUser)
+          setCurrentRole("artisan")
+          setIsLoggedIn(true)
+          try {
+            localStorage.setItem("simplificant_is_logged_in", "true")
+            localStorage.setItem("simplificant_current_user_v5", JSON.stringify(artisanUser))
+          } catch {}
+          if (sellerPartial) {
+            setCurrentSeller((prev) => ({
+              ...prev,
+              ...sellerPartial,
+              id: artisanUser.id || prev.id,
+              name: artisanUser.name || prev.name,
+              phone: artisanUser.mobile || prev.phone,
+            }))
+          }
+          setBuyerExperience("catalog")
+          setArtistAuthModalOpen(false)
+          window.scrollTo({ top: 0, behavior: "smooth" })
+        }}
+        onRegisterUser={handleRegisterUser}
+        allUsers={activeUsers}
+        showToast={showToast}
       />
 
       {/* ─── MODAL: BUYER CUSTOMER SUPPORT CHAT ────────────────────────────── */}

@@ -13,10 +13,11 @@ interface SellerWorkplaceDashboardProps {
   ) => void
   onSwitchToBuyer: () => void
   showToast: (msg: string) => void
+  activeTab?: "studio" | "crafts" | "orders"
+  onTabChange?: (tab: "studio" | "crafts" | "orders") => void
 }
 
-type TimePeriod = "year" | "month" | "week" | "custom_date"
-type StudioSection = "all" | "crafts" | "orders" | "earnings" | "story"
+type StudioTab = "studio" | "crafts" | "orders"
 
 export default function SellerWorkplaceDashboard({
   seller,
@@ -27,79 +28,74 @@ export default function SellerWorkplaceDashboard({
   onUpdateOrderStatus,
   onSwitchToBuyer,
   showToast,
+  activeTab: activeTabProp,
+  onTabChange,
 }: SellerWorkplaceDashboardProps) {
-  const [activeSection, setActiveSection] = useState<StudioSection>("all")
-  const [timePeriod, setTimePeriod] = useState<TimePeriod>("month")
-  const [selectedCustomDate, setSelectedCustomDate] =
-    useState<string>("2026-09-06")
-  const [orderFilter, setOrderFilter] =
-    useState<"all" | "In Workshop" | "Shipped" | "Delivered">("all")
+  const [internalTab, setInternalTab] = useState<StudioTab>("studio")
+  const activeTab = activeTabProp || internalTab
 
-  // Dynamic sales data based on selected time period
-  const salesGraphData = useMemo(() => {
-    if (timePeriod === "year") {
-      return [
-        { label: "Jan", revenue: 24500, orders: 18 },
-        { label: "Feb", revenue: 28900, orders: 22 },
-        { label: "Mar", revenue: 35400, orders: 29 },
-        { label: "Apr", revenue: 31200, orders: 24 },
-        { label: "May", revenue: 42000, orders: 36 },
-        { label: "Jun", revenue: 38700, orders: 31 },
-        { label: "Jul", revenue: 46500, orders: 39 },
-        { label: "Aug", revenue: 52100, orders: 44 },
-        { label: "Sep (MTD)", revenue: 34800, orders: 28 },
-        { label: "Oct (Est)", revenue: 48000, orders: 40 },
-        { label: "Nov (Est)", revenue: 59000, orders: 52 },
-        { label: "Dec (Est)", revenue: 64000, orders: 58 },
-      ]
-    } else if (timePeriod === "month") {
-      return [
-        { label: "Sep 01", revenue: 4600, orders: 4 },
-        { label: "Sep 02", revenue: 6200, orders: 5 },
-        { label: "Sep 03", revenue: 3800, orders: 3 },
-        { label: "Sep 04", revenue: 7400, orders: 6 },
-        { label: "Sep 05", revenue: 5900, orders: 5 },
-        { label: "Sep 06 (Today)", revenue: 6900, orders: 5 },
-        { label: "Sep 07 (Est)", revenue: 4200, orders: 3 },
-        { label: "Sep 08 (Est)", revenue: 5800, orders: 4 },
-      ]
-    } else if (timePeriod === "week") {
-      return [
-        { label: "Mon", revenue: 3400, orders: 3 },
-        { label: "Tue", revenue: 4600, orders: 4 },
-        { label: "Wed", revenue: 6200, orders: 5 },
-        { label: "Thu", revenue: 3800, orders: 3 },
-        { label: "Fri", revenue: 7400, orders: 6 },
-        { label: "Sat", revenue: 5900, orders: 5 },
-        { label: "Sun", revenue: 6900, orders: 5 },
-      ]
-    } else {
-      return [
-        { label: "09:00 AM", revenue: 1150, orders: 1 },
-        { label: "11:30 AM", revenue: 2400, orders: 2 },
-        { label: "02:15 PM", revenue: 1650, orders: 1 },
-        { label: "04:45 PM", revenue: 1700, orders: 1 },
-        { label: "06:00 PM", revenue: 0, orders: 0 },
-      ]
-    }
-  }, [timePeriod, selectedCustomDate])
+  const handleTabChange = (t: StudioTab) => {
+    setInternalTab(t)
+    if (onTabChange) onTabChange(t)
+  }
 
-  const currentTotalRevenue = useMemo(() => {
-    return salesGraphData.reduce((sum, d) => sum + d.revenue, 0)
-  }, [salesGraphData])
+  const [orderFilter, setOrderFilter] = useState<"all" | "In Workshop" | "Shipped" | "Delivered">("all")
 
-  const currentTotalOrders = useMemo(() => {
-    return salesGraphData.reduce((sum, d) => sum + d.orders, 0)
-  }, [salesGraphData])
+  // Filter products that belong to this artisan
+  const artistProducts = useMemo(() => {
+    if (!products || products.length === 0) return []
+    const sName = (seller.name || "").toLowerCase().trim()
+    const sShop = (seller.shopName || "").toLowerCase().trim()
+    const sId = String(seller.id || "")
 
-  const maxRevenue = useMemo(() => {
-    return Math.max(...salesGraphData.map((d) => d.revenue), 1000)
-  }, [salesGraphData])
+    const matched = products.filter((p) => {
+      const artName = (p.artisan || "").toLowerCase().trim()
+      const artId = String(p.artisan_id || "")
+      const matchName = sName && (artName.includes(sName) || sName.includes(artName))
+      const matchShop = sShop && p.description?.en?.toLowerCase().includes(sShop)
+      const matchId = sId && (artId === sId || sId.includes(artId))
+      return matchName || matchShop || matchId
+    })
 
+    if (matched.length > 0) return matched
+
+    // Fallback: search for "Mohan Lal" in products if default artisan
+    const mohanProducts = products.filter((p) =>
+      (p.artisan || "").toLowerCase().includes("mohan lal"),
+    )
+    if (mohanProducts.length > 0) return mohanProducts
+
+    return products.slice(0, 6)
+  }, [products, seller])
+
+  // Filter orders for this artisan
+  const artistOrders = useMemo(() => {
+    if (!orders || orders.length === 0) return []
+    const sName = (seller.name || "").toLowerCase().trim()
+    const sShop = (seller.shopName || "").toLowerCase().trim()
+
+    const matched = orders.filter((o) => {
+      const art = (o.artisanName || "").toLowerCase()
+      const shop = (o.sellerShopName || "").toLowerCase()
+      return (sName && art.includes(sName)) || (sShop && shop.includes(sShop))
+    })
+
+    return matched.length > 0 ? matched : orders
+  }, [orders, seller])
+
+  // Calculate Available Pieces (sum of stockQuantity across artist's crafts)
+  const availablePiecesCount = useMemo(() => {
+    return artistProducts.reduce((sum, p) => {
+      const qty = typeof p.stockQuantity === "number" ? p.stockQuantity : 10
+      return sum + Math.max(0, qty)
+    }, 0)
+  }, [artistProducts])
+
+  // Filtered orders by status
   const filteredOrders = useMemo(() => {
-    if (orderFilter === "all") return orders
+    if (orderFilter === "all") return artistOrders
     if (orderFilter === "In Workshop") {
-      return orders.filter(
+      return artistOrders.filter(
         (o) =>
           o.status === "In Workshop" ||
           o.status === "Confirmed" ||
@@ -108,758 +104,587 @@ export default function SellerWorkplaceDashboard({
       )
     }
     if (orderFilter === "Shipped") {
-      return orders.filter(
+      return artistOrders.filter(
         (o) =>
           o.status === "Shipped" ||
           o.status === "In Transit" ||
           o.status === "Out for Delivery",
       )
     }
-    return orders.filter((o) => o.status === "Delivered")
-  }, [orders, orderFilter])
+    return artistOrders.filter((o) => o.status === "Delivered")
+  }, [artistOrders, orderFilter])
 
   const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`
 
+  const artisanPhone = seller.phone || "8830070893"
+  const artisanGuild = seller.clusterGI || "Sanganer GI Craft Guild · Jaipur, Rajasthan"
+  const artisanHub = seller.shopName || "Sanganer Heritage Blue Pottery Hub"
+
   return (
-    <div className="max-w-7xl mx-auto space-y-12 pb-20 font-sans text-[#241C15] animate-in fade-in">
-      {/* ─── 1. ARTIST SHOPFRONT HEADER ────────────────────────────────────── */}
-      <section className="relative bg-[#FDFBF7] border-b border-[#EFE8D8] pb-10 sm:pb-12 pt-4">
-        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
-          {/* Left: Artisan Profile & Identity */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
-            {/* Artisan Portrait / Craft Studio Image */}
-            <div className="relative group shrink-0">
-              <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden border-2 border-[#E4DAC8] shadow-md bg-[#EFE8D8]">
-                <img
-                  src="https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?auto=format&fit=crop&q=80&w=400"
-                  alt={seller.name}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                />
+    <div className="max-w-7xl mx-auto space-y-10 pb-24 font-sans text-[#241C15] animate-in fade-in">
+      {/* ─── 2. LARGE ARTISAN STUDIO HERO ─────────────────────────────────── */}
+      <section className="relative bg-[#FAF7F2] border border-[#E4DAC8] rounded-3xl p-6 sm:p-10 lg:p-12 overflow-hidden shadow-xs">
+        <div className="flex flex-col lg:flex-row items-center lg:items-stretch gap-8 lg:gap-12">
+          {/* Large Artisan Photo: 40–50% of the visual area on desktop */}
+          <div className="w-full lg:w-5/12 xl:w-1/2 shrink-0">
+            <div className="relative w-full h-80 sm:h-96 lg:h-full min-h-[340px] rounded-2xl overflow-hidden border border-[#E4DAC8] shadow-sm bg-[#EFE8D8]">
+              <img
+                src="https://images.unsplash.com/photo-1578749556568-bc2c40e68b61?auto=format&fit=crop&q=80&w=800"
+                alt="Artisan in workshop"
+                className="w-full h-full object-cover object-center"
+              />
+              <div className="absolute top-4 left-4 bg-[#FDFBF7]/95 backdrop-blur-xs px-3.5 py-1 rounded-full border border-[#E4DAC8] text-xs font-sans font-medium text-[#241C15] shadow-xs">
+                GI Verified Master Maker
               </div>
-              <span className="absolute bottom-1 right-1 w-5 h-5 bg-[#C9922E] text-[#241C15] rounded-full flex items-center justify-center text-[10px] shadow-xs" title="Verified Master Maker">
-                ✦
-              </span>
-            </div>
-
-            {/* Artisan Titles & Location */}
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold tracking-wider uppercase text-[#B7592F]">
-                  <span className="w-2 h-2 rounded-full bg-[#B7592F]" />
-                  Verified GI Artisan
-                </span>
-                <span className="text-[#8C7E6D] text-xs">·</span>
-                <span className="text-xs text-[#6B6255] font-light">
-                  {seller.websiteOrHandle || "@mohanlal_bluepottery"}
-                </span>
-              </div>
-
-              <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-normal text-[#241C15] tracking-tight leading-tight">
-                {seller.name}
-              </h1>
-
-              <p className="text-sm text-[#5B5750] font-light">
-                5th Generation Potter · {seller.clusterGI || "Sanganer Craft Guild · Jaipur"}
-              </p>
-
-              {/* Gentle Direct Payout Note */}
-              <p className="text-xs text-[#8C7E6D] font-light">
-                Registered account: <span className="font-mono text-[#241C15] font-medium">{seller.upiId}</span> · 100% direct payouts
-              </p>
             </div>
           </div>
 
-          {/* Right: Studio Actions */}
-          <div className="flex flex-wrap items-center gap-3 shrink-0">
-            <button
-              onClick={onOpenUploadModal}
-              className="bg-[#241C15] hover:bg-[#3A2C20] text-[#FDFBF7] px-6 py-3 rounded-full text-xs font-medium tracking-wide transition-all shadow-sm hover:scale-[1.01] cursor-pointer flex items-center gap-2"
-            >
-              <span>+</span>
-              <span>Add a Craft</span>
-            </button>
-
-            <button
-              onClick={onOpenEditProfile}
-              className="border border-[#241C15]/30 hover:border-[#241C15] text-[#241C15] px-5 py-3 rounded-full text-xs font-medium tracking-wide transition-colors hover:bg-[#FAF7F2] cursor-pointer"
-            >
-              Edit Shop Details
-            </button>
-
-            <button
-              onClick={onSwitchToBuyer}
-              className="text-xs text-[#8C7E6D] hover:text-[#241C15] px-2 py-3 transition-colors cursor-pointer flex items-center gap-1"
-            >
-              <span>←</span>
-              <span>Marketplace</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Editorial Metadata Strip (Unboxed Typography & Spacing, NO KPI cards) */}
-        <div className="mt-8 pt-6 border-t border-[#EFE8D8] flex flex-wrap items-center justify-between gap-6 text-xs text-[#5B5750]">
-          <div className="flex flex-wrap items-center gap-6 sm:gap-10">
-            <div>
-              <span className="font-serif text-xl sm:text-2xl font-normal text-[#241C15] block">
-                {products.length}
-              </span>
-              <span className="text-[10.5px] uppercase tracking-wider text-[#8C7E6D]">
-                Crafts in Studio
-              </span>
-            </div>
-
-            <div className="h-8 w-px bg-[#EFE8D8] hidden sm:block" />
-
-            <div>
-              <span className="font-serif text-xl sm:text-2xl font-normal text-[#241C15] block">
-                {orders.length}
-              </span>
-              <span className="text-[10.5px] uppercase tracking-wider text-[#8C7E6D]">
-                Active Orders
-              </span>
-            </div>
-
-            <div className="h-8 w-px bg-[#EFE8D8] hidden sm:block" />
-
-            <div>
-              <span className="font-serif text-xl sm:text-2xl font-normal text-[#241C15] block">
-                100%
-              </span>
-              <span className="text-[10.5px] uppercase tracking-wider text-[#8C7E6D]">
-                Direct Bank Payout
-              </span>
-            </div>
-
-            <div className="h-8 w-px bg-[#EFE8D8] hidden sm:block" />
-
-            <div>
-              <span className="font-serif text-xl sm:text-2xl font-normal text-[#241C15] block">
-                {seller.rating || 4.92} ★
-              </span>
-              <span className="text-[10.5px] uppercase tracking-wider text-[#8C7E6D]">
-                Guild Rating
-              </span>
-            </div>
-          </div>
-
-          {/* Provenance note */}
-          <div className="hidden lg:flex items-center gap-2 text-[11px] text-[#8C7E6D]">
-            <span className="text-[#C9922E]">✦</span>
-            <span>Zero Middlemen Deductions · Insured India Post GI Express</span>
-          </div>
-        </div>
-      </section>
-
-      {/* ─── 2. QUIET PROVENANCE & CERTIFICATION STRIP ─────────────────────── */}
-      <section className="bg-[#FAF7F2] rounded-2xl p-4 sm:p-5 border border-[#EFE8D8]">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
-          <div className="space-y-0.5">
-            <span className="text-[10px] uppercase tracking-wider font-semibold text-[#8C7E6D] block">
-              GI Heritage Verified
-            </span>
-            <p className="font-medium text-[#241C15]">
-              {seller.associatedGuild || "Sanganer Blue Pottery Artisans Society"}
-            </p>
-          </div>
-
-          <div className="space-y-0.5">
-            <span className="text-[10px] uppercase tracking-wider font-semibold text-[#8C7E6D] block">
-              Direct Benefit Transfer
-            </span>
-            <p className="font-medium text-[#241C15]">
-              100% credited to {seller.upiId}
-            </p>
-          </div>
-
-          <div className="space-y-0.5">
-            <span className="text-[10px] uppercase tracking-wider font-semibold text-[#8C7E6D] block">
-              Fair Pricing Engine
-            </span>
-            <p className="font-medium text-[#241C15]">
-              Raw materials + skilled hourly wage formula
-            </p>
-          </div>
-
-          <div className="space-y-0.5">
-            <span className="text-[10px] uppercase tracking-wider font-semibold text-[#8C7E6D] block">
-              Workshop Location
-            </span>
-            <p className="font-medium text-[#241C15] truncate">
-              {seller.workshopAddress || "Kumhar Mohalla, Sanganer, Jaipur"}
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* ─── 3. DIGITAL CRAFT STUDIO NAVIGATION ────────────────────────────── */}
-      <div className="flex border-b border-[#EFE8D8] gap-4 sm:gap-8 text-xs tracking-wider uppercase font-medium text-[#8C7E6D] overflow-x-auto pb-px">
-        <button
-          onClick={() => setActiveSection("all")}
-          className={`pb-3 transition-colors cursor-pointer border-b-2 whitespace-nowrap ${
-            activeSection === "all"
-              ? "border-[#241C15] text-[#241C15] font-semibold"
-              : "border-transparent hover:text-[#241C15]"
-          }`}
-        >
-          Studio Overview
-        </button>
-
-        <button
-          onClick={() => setActiveSection("crafts")}
-          className={`pb-3 transition-colors cursor-pointer border-b-2 whitespace-nowrap ${
-            activeSection === "crafts"
-              ? "border-[#241C15] text-[#241C15] font-semibold"
-              : "border-transparent hover:text-[#241C15]"
-          }`}
-        >
-          My Crafts ({products.length})
-        </button>
-
-        <button
-          onClick={() => setActiveSection("orders")}
-          className={`pb-3 transition-colors cursor-pointer border-b-2 whitespace-nowrap flex items-center gap-1.5 ${
-            activeSection === "orders"
-              ? "border-[#241C15] text-[#241C15] font-semibold"
-              : "border-transparent hover:text-[#241C15]"
-          }`}
-        >
-          <span>In the Workshop ({orders.length})</span>
-          {orders.some((o) => o.status === "In Workshop") && (
-            <span className="w-1.5 h-1.5 rounded-full bg-[#B7592F]" />
-          )}
-        </button>
-
-        <button
-          onClick={() => setActiveSection("earnings")}
-          className={`pb-3 transition-colors cursor-pointer border-b-2 whitespace-nowrap ${
-            activeSection === "earnings"
-              ? "border-[#241C15] text-[#241C15] font-semibold"
-              : "border-transparent hover:text-[#241C15]"
-          }`}
-        >
-          Earnings & Timeline
-        </button>
-
-        <button
-          onClick={() => setActiveSection("story")}
-          className={`pb-3 transition-colors cursor-pointer border-b-2 whitespace-nowrap ${
-            activeSection === "story"
-              ? "border-[#241C15] text-[#241C15] font-semibold"
-              : "border-transparent hover:text-[#241C15]"
-          }`}
-        >
-          Story & Lineage
-        </button>
-      </div>
-
-      {/* ─── 4. SECTION: FROM THE STUDIO (ARTISAN SHOPFRONT) ────────────────── */}
-      {(activeSection === "all" || activeSection === "crafts") && (
-        <section className="space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
-            <div>
-              <span className="text-[10px] uppercase tracking-widest text-[#B7592F] font-semibold block">
-                SHOPFRONT
-              </span>
-              <h2 className="font-serif text-2xl sm:text-3xl text-[#241C15] font-normal tracking-tight">
-                From the Studio
-              </h2>
-              <p className="text-xs sm:text-sm text-[#6B6255] font-light">
-                Handmade pieces shaped, glazed, and available for collectors.
-              </p>
-            </div>
-
-            <button
-              onClick={onOpenUploadModal}
-              className="text-xs font-medium text-[#241C15] hover:text-[#B7592F] transition-colors cursor-pointer flex items-center gap-1 self-start sm:self-auto"
-            >
-              <span>+ Add another craft</span>
-              <span>→</span>
-            </button>
-          </div>
-
-          {/* E-Commerce Editorial Craft Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
-            {/* The Main Action Tile: Add a New Craft */}
-            <div
-              onClick={onOpenUploadModal}
-              className="group border border-dashed border-[#C9922E]/60 hover:border-[#B7592F] bg-[#FAF7F2]/60 hover:bg-[#FAF7F2] rounded-3xl p-8 flex flex-col items-center justify-center text-center gap-4 transition-all duration-300 cursor-pointer min-h-[340px]"
-            >
-              <div className="w-14 h-14 rounded-full bg-[#EFE8D8] group-hover:bg-[#E4DAC8] text-[#241C15] flex items-center justify-center text-2xl transition-colors">
-                +
-              </div>
+          {/* Text & Actions Beside Image (Editorial Composition) */}
+          <div className="w-full lg:w-7/12 xl:w-1/2 flex flex-col justify-between py-1 lg:py-3 space-y-8">
+            <div className="space-y-4">
+              {/* Category / Workshop Label & Guild */}
               <div className="space-y-1">
-                <span className="text-xs font-semibold uppercase tracking-wider text-[#241C15] block">
-                  Add a New Craft
+                <span className="text-xs uppercase tracking-widest font-semibold text-[#B7592F] font-sans block">
+                  ARTISAN WORKSHOP
                 </span>
-                <p className="text-xs text-[#6B6255] font-light max-w-[200px] leading-relaxed">
-                  Photograph it with your camera. Tell its material story and calculate fair wages.
+                <p className="text-sm text-[#6B6255] font-sans font-normal">
+                  {artisanGuild}
                 </p>
               </div>
-              <span className="text-[11px] text-[#B7592F] font-medium group-hover:underline pt-2">
-                Open Camera Listing Studio →
-              </span>
-            </div>
 
-            {/* Existing Crafts in Studio */}
-            {products.map((prod) => (
-              <div
-                key={prod.id}
-                className="group flex flex-col justify-between bg-[#FDFBF7] rounded-3xl p-4 border border-[#EFE8D8] hover:border-[#E4DAC8] hover:shadow-md transition-all duration-300"
-              >
-                <div>
-                  {/* Craft Image */}
-                  <div className="relative aspect-square rounded-2xl overflow-hidden bg-[#EFE8D8] mb-4">
-                    <img
-                      src={prod.image}
-                      alt={prod.name.en}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
-                      onError={(e) => {
-                        e.currentTarget.onerror = null
-                        e.currentTarget.src =
-                          "https://images.unsplash.com/photo-1590736969955-71cc94801759?w=800&h=800&fit=crop&auto=format"
-                      }}
-                    />
+              {/* Main H1 Heading (Upright Fraunces, NO ITALIC) */}
+              <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl text-[#241C15] font-normal tracking-tight leading-[1.08]">
+                My Craft Studio
+              </h1>
 
-                    {/* Quiet Provenance Label */}
-                    {prod.gi_tagged && (
-                      <span className="absolute top-3 left-3 bg-[#FDFBF7]/95 backdrop-blur-xs text-[#241C15] text-[9.5px] font-semibold px-2 py-0.5 rounded-full border border-[#E4DAC8]">
-                        GI Certified
-                      </span>
-                    )}
-
-                    <span className="absolute bottom-3 left-3 bg-[#241C15]/70 backdrop-blur-xs text-[#FDFBF7] text-[9.5px] font-light px-2 py-0.5 rounded-md">
-                      In Stock
-                    </span>
-                  </div>
-
-                  {/* Craft Info */}
-                  <div className="space-y-1 px-1">
-                    <p className="text-[10px] uppercase tracking-wider text-[#8C7E6D]">
-                      {prod.category} · {prod.location.en.split(",")[0]}
-                    </p>
-                    <h3 className="font-serif text-lg text-[#241C15] font-normal leading-snug group-hover:text-[#B7592F] transition-colors truncate">
-                      {prod.name.en}
-                    </h3>
-                    <p className="text-xs text-[#6B6255] font-light line-clamp-2 leading-relaxed">
-                      {prod.description.en}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Price and Details */}
-                <div className="pt-4 mt-3 border-t border-[#EFE8D8] flex items-center justify-between px-1">
-                  <span className="font-serif text-lg font-medium text-[#241C15]">
-                    {fmt(prod.price)}
-                  </span>
-                  <button
-                    onClick={onOpenUploadModal}
-                    className="text-[11px] text-[#8C7E6D] hover:text-[#241C15] transition-colors cursor-pointer"
-                  >
-                    Manage Craft
-                  </button>
-                </div>
+              {/* Phone Number & Studio Hub */}
+              <div className="space-y-1 pt-1 font-sans">
+                <p className="text-base sm:text-lg font-medium text-[#241C15] tracking-tight">
+                  {artisanPhone}
+                </p>
+                <p className="text-sm sm:text-base text-[#6B6255] font-normal">
+                  {artisanHub}
+                </p>
               </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* ─── 5. SECTION: IN THE WORKSHOP (ORDERS QUEUE) ────────────────────── */}
-      {(activeSection === "all" || activeSection === "orders") && (
-        <section className="space-y-6 pt-6">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-            <div>
-              <span className="text-[10px] uppercase tracking-widest text-[#B7592F] font-semibold block">
-                FULFILLMENT
-              </span>
-              <h2 className="font-serif text-2xl sm:text-3xl text-[#241C15] font-normal tracking-tight">
-                In the Workshop
-              </h2>
-              <p className="text-xs sm:text-sm text-[#6B6255] font-light">
-                Pieces awaiting shaping, inspection, packing, or dispatch.
-              </p>
             </div>
 
-            {/* Filter Buttons */}
-            <div className="flex flex-wrap items-center gap-1.5 self-start sm:self-auto">
-              {(["all", "In Workshop", "Shipped", "Delivered"] as const).map(
-                (filter) => (
-                  <button
-                    key={filter}
-                    onClick={() => setOrderFilter(filter)}
-                    className={`text-xs px-3.5 py-1.5 rounded-full transition-all cursor-pointer font-medium ${
-                      orderFilter === filter
-                        ? "bg-[#241C15] text-[#FDFBF7]"
-                        : "bg-[#FAF7F2] text-[#6B6255] hover:bg-[#EFE8D8]"
-                    }`}
+            {/* Actions: ONLY "+ Add Craft" and "Edit Studio" */}
+            <div className="flex flex-wrap items-center gap-4 pt-2">
+              <button
+                onClick={onOpenUploadModal}
+                className="bg-[#241C15] hover:bg-[#3A2C20] text-[#FDFBF7] px-6 py-3 rounded-full text-xs font-semibold tracking-wide transition-all shadow-xs cursor-pointer flex items-center gap-2 font-sans"
+              >
+                <span className="text-base leading-none font-normal">+</span>
+                <span>Add Craft</span>
+              </button>
+
+              <button
+                onClick={onOpenEditProfile}
+                className="border border-[#E4DAC8] bg-white hover:bg-[#FAF7F2] text-[#241C15] px-6 py-3 rounded-full text-xs font-medium transition-colors cursor-pointer font-sans shadow-xs"
+              >
+                Edit Studio
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── 5. SIMPLE STUDIO NAVIGATION ───────────────────────────────────── */}
+      {/* Clean navigation: Studio, My Crafts, Orders, and one clear action: + Add Craft */}
+      <nav className="flex items-center justify-between border-b border-[#E4DAC8] pb-1 text-sm font-sans">
+        <div className="flex items-center gap-8 sm:gap-12">
+          <button
+            onClick={() => handleTabChange("studio")}
+            className={`pb-3 transition-colors cursor-pointer border-b-2 font-medium ${
+              activeTab === "studio"
+                ? "border-[#B7592F] text-[#241C15] font-semibold"
+                : "border-transparent text-[#8C7E6D] hover:text-[#241C15]"
+            }`}
+          >
+            Studio
+          </button>
+
+          <button
+            onClick={() => handleTabChange("crafts")}
+            className={`pb-3 transition-colors cursor-pointer border-b-2 font-medium ${
+              activeTab === "crafts"
+                ? "border-[#B7592F] text-[#241C15] font-semibold"
+                : "border-transparent text-[#8C7E6D] hover:text-[#241C15]"
+            }`}
+          >
+            My Crafts
+          </button>
+
+          <button
+            onClick={() => handleTabChange("orders")}
+            className={`pb-3 transition-colors cursor-pointer border-b-2 font-medium ${
+              activeTab === "orders"
+                ? "border-[#B7592F] text-[#241C15] font-semibold"
+                : "border-transparent text-[#8C7E6D] hover:text-[#241C15]"
+            }`}
+          >
+            Orders
+          </button>
+        </div>
+
+        {/* One clear action: + Add Craft */}
+        <button
+          onClick={onOpenUploadModal}
+          className="pb-3 text-xs font-semibold text-[#B7592F] hover:text-[#964724] transition-colors cursor-pointer flex items-center gap-1.5"
+        >
+          <span className="text-base leading-none font-normal">+</span>
+          <span>Add Craft</span>
+        </button>
+      </nav>
+
+      {/* ─── TAB 1: STUDIO (OVERVIEW) ──────────────────────────────────────── */}
+      {activeTab === "studio" && (
+        <div className="space-y-12">
+          {/* Restrained Studio Summary */}
+          <section className="bg-white rounded-3xl p-6 sm:p-10 border border-[#EFE8D8] shadow-xs">
+            <span className="text-xs uppercase tracking-widest text-[#B7592F] font-semibold font-sans block mb-6">
+              STUDIO SUMMARY
+            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-12">
+              <div className="space-y-1.5">
+                <span className="font-serif text-4xl sm:text-5xl text-[#241C15] font-normal block leading-tight">
+                  {artistProducts.length}
+                </span>
+                <span className="text-xs uppercase tracking-wider text-[#8C7E6D] block font-sans font-medium">
+                  My Crafts
+                </span>
+                <span className="text-xs text-[#6B6255] font-sans font-light">
+                  Active handcrafted listings
+                </span>
+              </div>
+
+              <div className="space-y-1.5 border-t sm:border-t-0 sm:border-l border-[#EFE8D8] pt-6 sm:pt-0 sm:pl-10">
+                <span className="font-serif text-4xl sm:text-5xl text-[#241C15] font-normal block leading-tight">
+                  {artistOrders.length}
+                </span>
+                <span className="text-xs uppercase tracking-wider text-[#8C7E6D] block font-sans font-medium">
+                  Orders
+                </span>
+                <span className="text-xs text-[#6B6255] font-sans font-light">
+                  Direct buyer purchases
+                </span>
+              </div>
+
+              <div className="space-y-1.5 border-t sm:border-t-0 sm:border-l border-[#EFE8D8] pt-6 sm:pt-0 sm:pl-10">
+                <span className="font-serif text-4xl sm:text-5xl text-[#B7592F] font-normal block leading-tight">
+                  {availablePiecesCount}
+                </span>
+                <span className="text-xs uppercase tracking-wider text-[#8C7E6D] block font-sans font-medium">
+                  Available Pieces
+                </span>
+                <span className="text-xs text-[#6B6255] font-sans font-light">
+                  Ready in workshop for buyers
+                </span>
+              </div>
+            </div>
+          </section>
+
+          {/* Workshop Heritage Note */}
+          <section className="bg-[#FAF7F2] rounded-3xl p-6 sm:p-8 border border-[#E4DAC8] space-y-3">
+            <span className="text-xs uppercase tracking-widest text-[#B7592F] font-semibold font-sans block">
+              WORKSHOP HERITAGE
+            </span>
+            <h2 className="font-serif text-2xl sm:text-3xl text-[#241C15] font-normal tracking-tight">
+              Hand-turned in Sanganer with Natural Earth Minerals
+            </h2>
+            <p className="text-sm text-[#5B5750] font-sans font-light leading-relaxed max-w-3xl">
+              Each piece is formed using traditional quartz stone powder, Fuller's earth, and plant gum, 
+              then hand-painted with cobalt oxide and fired once in traditional kilns. Verified under 
+              the Sanganer GI Craft Guild registration for authentic craft preservation.
+            </p>
+          </section>
+
+          {/* Featured Crafts (2-Column Large Editorial Cards) */}
+          <section className="space-y-8">
+            <div className="flex items-end justify-between">
+              <div>
+                <span className="text-xs uppercase tracking-widest text-[#B7592F] font-semibold font-sans block mb-1">
+                  WORKSHOP CREATIONS
+                </span>
+                <h2 className="font-serif text-3xl sm:text-4xl text-[#241C15] font-normal tracking-tight">
+                  Crafts in Studio
+                </h2>
+              </div>
+
+              <button
+                onClick={() => setActiveTab("crafts")}
+                className="text-xs font-semibold text-[#B7592F] hover:text-[#964724] transition-colors cursor-pointer"
+              >
+                View all crafts ({artistProducts.length}) →
+              </button>
+            </div>
+
+            {/* Spacious 2-Column Grid on Desktop */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
+              {artistProducts.slice(0, 4).map((craft) => {
+                const title = craft.name.en || craft.name.hi || "Handcrafted Craft"
+                const qty = typeof craft.stockQuantity === "number" ? craft.stockQuantity : 10
+                const desc = craft.description?.en || craft.description?.hi || ""
+
+                return (
+                  <div
+                    key={craft.id}
+                    className="group bg-[#FAF7F2]/60 hover:bg-[#FAF7F2] p-6 sm:p-8 rounded-3xl border border-[#E4DAC8] transition-all duration-300 shadow-xs flex flex-col justify-between"
                   >
-                    {filter === "all" ? "All Orders" : filter}
-                  </button>
-                ),
-              )}
-            </div>
-          </div>
-
-          {/* Orders List */}
-          {filteredOrders.length === 0 ? (
-            <div className="p-12 text-center bg-[#FAF7F2] rounded-3xl border border-[#EFE8D8] space-y-2">
-              <span className="text-3xl">🏺</span>
-              <h4 className="font-serif text-lg font-medium text-[#241C15]">
-                Workshop queue is clear
-              </h4>
-              <p className="text-xs text-[#6B6255] font-light max-w-sm mx-auto">
-                No orders in this status right now. When buyers purchase your crafts, their orders will appear here ready to craft and pack.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {filteredOrders.map((order) => (
-                <div
-                  key={order.id}
-                  className="p-5 sm:p-6 bg-[#FDFBF7] rounded-3xl border border-[#EFE8D8] hover:border-[#E4DAC8] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6 transition-all"
-                >
-                  {/* Left: Product & Buyer Context */}
-                  <div className="flex items-start sm:items-center gap-4 sm:gap-5">
-                    <img
-                      src={order.productImage}
-                      alt={order.productTitle}
-                      className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border border-[#EFE8D8] shrink-0"
-                      onError={(e) => {
-                        e.currentTarget.onerror = null
-                        e.currentTarget.src =
-                          "https://images.unsplash.com/photo-1590736969955-71cc94801759?w=800&h=800&fit=crop&auto=format"
-                      }}
-                    />
-
-                    <div className="space-y-1">
-                      <div className="flex flex-wrap items-center gap-2 text-xs text-[#8C7E6D]">
-                        <span className="font-mono font-medium text-[#241C15]">
-                          {order.id}
+                    <div>
+                      {/* Large Product Image */}
+                      <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden bg-[#EFE8D8] border border-[#E4DAC8] mb-6">
+                        <img
+                          src={craft.image}
+                          alt={title}
+                          className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-700 ease-out"
+                          onError={(e) => {
+                            e.currentTarget.onerror = null
+                            e.currentTarget.src =
+                              "https://images.unsplash.com/photo-1590736969955-71cc94801759?w=800&h=800&fit=crop&auto=format"
+                          }}
+                        />
+                        {craft.gi_tagged && (
+                          <span className="absolute top-4 left-4 bg-[#FDFBF7]/95 backdrop-blur-xs text-[#241C15] text-xs font-sans font-medium px-3 py-1 rounded-full border border-[#E4DAC8] shadow-xs">
+                            GI Certified
+                          </span>
+                        )}
+                        <span className="absolute bottom-4 left-4 bg-[#241C15]/85 backdrop-blur-xs text-[#FDFBF7] text-xs font-sans px-3 py-1 rounded-md">
+                          {craft.category}
                         </span>
-                        <span>·</span>
-                        <span>Placed on {order.orderDate}</span>
                       </div>
 
-                      <h4 className="font-serif text-base sm:text-lg font-normal text-[#241C15]">
-                        {order.productTitle}
-                      </h4>
+                      {/* Craft Information */}
+                      <div className="space-y-2">
+                        <h3 className="font-serif text-2xl sm:text-3xl text-[#241C15] font-normal leading-tight tracking-tight">
+                          {title}
+                        </h3>
 
-                      <p className="text-xs text-[#5B5750] font-light">
-                        For <strong>{order.buyerName}</strong> ({order.buyerPhone}) · {order.shippingAddress}
-                      </p>
+                        {desc && (
+                          <p className="text-sm sm:text-base text-[#5B5750] font-sans font-light leading-relaxed line-clamp-2">
+                            {desc}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Subtle Price & Stock Line */}
+                    <div className="pt-5 mt-6 border-t border-[#E4DAC8]">
+                      <div className="flex items-baseline justify-between">
+                        <span className="font-serif text-2xl sm:text-3xl text-[#241C15] font-normal">
+                          {fmt(craft.price)}
+                        </span>
+                        <span className="text-xs uppercase tracking-wider font-semibold text-[#B7592F] font-sans">
+                          Available · {qty} pieces
+                        </span>
+                      </div>
                     </div>
                   </div>
+                )
+              })}
+            </div>
+          </section>
 
-                  {/* Right: Payment Transparency & Dispatch Actions */}
-                  <div className="flex items-center justify-between md:justify-end gap-6 shrink-0 border-t md:border-t-0 pt-4 md:pt-0 border-[#EFE8D8]">
-                    <div className="text-left md:text-right">
-                      <span className="font-serif text-xl font-medium text-[#241C15] block">
-                        {fmt(order.totalAmount)}
-                      </span>
-                      <span className="text-[11px] text-emerald-700 font-medium block">
-                        ✓ Direct Bank Payout Approved
-                      </span>
+          {/* Recent Orders Overview */}
+          <section className="space-y-6">
+            <div className="flex items-end justify-between">
+              <div>
+                <span className="text-xs uppercase tracking-widest text-[#B7592F] font-semibold font-sans block mb-1">
+                  DISPATCH QUEUE
+                </span>
+                <h2 className="font-serif text-3xl text-[#241C15] font-normal tracking-tight">
+                  Recent Orders
+                </h2>
+              </div>
+
+              <button
+                onClick={() => setActiveTab("orders")}
+                className="text-xs font-semibold text-[#B7592F] hover:text-[#964724] transition-colors cursor-pointer"
+              >
+                View all orders ({artistOrders.length}) →
+              </button>
+            </div>
+
+            {artistOrders.length === 0 ? (
+              <div className="p-8 text-center bg-white rounded-3xl border border-[#EFE8D8]">
+                <p className="text-xs text-[#6B6255] font-sans">
+                  No orders yet. As soon as buyers purchase your crafts, their orders will appear here.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {artistOrders.slice(0, 3).map((order) => (
+                  <div
+                    key={order.id}
+                    className="p-5 sm:p-6 bg-white rounded-2xl border border-[#E4DAC8] flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs"
+                  >
+                    <div className="flex items-center gap-4">
+                      <img
+                        src={order.productImage}
+                        alt={order.productTitle}
+                        className="w-16 h-16 rounded-xl object-cover border border-[#E4DAC8] shrink-0"
+                        onError={(e) => {
+                          e.currentTarget.onerror = null
+                          e.currentTarget.src =
+                            "https://images.unsplash.com/photo-1590736969955-71cc94801759?w=800&h=800&fit=crop&auto=format"
+                        }}
+                      />
+                      <div>
+                        <div className="flex items-center gap-2 text-xs text-[#8C7E6D] font-sans">
+                          <span className="font-mono font-medium text-[#241C15]">{order.id}</span>
+                          <span>·</span>
+                          <span>{order.orderDate}</span>
+                        </div>
+                        <h4 className="font-serif text-lg text-[#241C15] font-normal leading-snug">
+                          {order.productTitle}
+                        </h4>
+                        <p className="text-xs text-[#6B6255] font-sans">
+                          Buyer: <strong>{order.buyerName}</strong> · Quantity: {order.quantity || 1}
+                        </p>
+                      </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      {order.status === "In Workshop" && (
-                        <button
-                          onClick={() => {
-                            onUpdateOrderStatus(order.id, "Shipped")
-                            showToast(
-                              `📦 Order ${order.id} marked as Shipped via India Post!`,
-                            )
-                          }}
-                          className="bg-[#241C15] hover:bg-[#3A2C20] text-[#FDFBF7] px-4 py-2.5 rounded-full text-xs font-medium tracking-wide transition-colors cursor-pointer"
-                        >
-                          Mark Shipped
-                        </button>
-                      )}
+                    <div className="flex items-center justify-between sm:justify-end gap-6 shrink-0 border-t sm:border-t-0 pt-3 sm:pt-0 border-[#EFE8D8]">
+                      <div className="text-left sm:text-right font-sans">
+                        <span className="font-serif text-xl text-[#241C15] font-normal block">
+                          {fmt(order.totalAmount)}
+                        </span>
+                        <span className="text-xs text-emerald-700 font-medium">
+                          Direct Payout
+                        </span>
+                      </div>
 
-                      {order.status === "Shipped" && (
-                        <button
-                          onClick={() => {
-                            onUpdateOrderStatus(order.id, "Delivered")
-                            showToast(
-                              `🎉 Order ${order.id} marked as Delivered!`,
-                            )
-                          }}
-                          className="bg-emerald-700 hover:bg-emerald-800 text-white px-4 py-2.5 rounded-full text-xs font-medium tracking-wide transition-colors cursor-pointer"
-                        >
-                          Mark Delivered
-                        </button>
-                      )}
-
-                      <span className="text-xs text-[#5B5750] px-3 py-1.5 rounded-full bg-[#FAF7F2] border border-[#EFE8D8]">
+                      <span className="text-xs text-[#5B5750] px-3.5 py-1.5 rounded-full bg-[#FAF7F2] border border-[#E4DAC8] font-sans font-medium">
                         {order.status}
                       </span>
                     </div>
                   </div>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+      )}
+
+      {/* ─── TAB 2: MY CRAFTS (LARGE 2-COLUMN GRID) ─────────────────────────── */}
+      {activeTab === "crafts" && (
+        <section className="space-y-8">
+          <div className="space-y-2">
+            <span className="text-xs uppercase tracking-widest text-[#B7592F] font-semibold font-sans block">
+              WORKSHOP INVENTORY
+            </span>
+            <h2 className="font-serif text-3xl sm:text-4xl text-[#241C15] font-normal tracking-tight">
+              My Crafts
+            </h2>
+            <p className="text-sm text-[#6B6255] font-sans font-light max-w-2xl leading-relaxed">
+              Every handcrafted piece registered to your workshop studio. Available stock reflects 
+              ready-to-dispatch inventory.
+            </p>
+          </div>
+
+          {/* 6. Spacious 2-Column Grid on Desktop */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12">
+            {artistProducts.map((craft) => {
+              const title = craft.name.en || craft.name.hi || "Handcrafted Craft"
+              const qty = typeof craft.stockQuantity === "number" ? craft.stockQuantity : 10
+              const desc = craft.description?.en || craft.description?.hi || ""
+
+              return (
+                <div
+                  key={craft.id}
+                  className="group bg-[#FAF7F2]/60 hover:bg-[#FAF7F2] p-6 sm:p-8 rounded-3xl border border-[#E4DAC8] transition-all duration-300 shadow-xs flex flex-col justify-between"
+                >
+                  <div>
+                    {/* Large Product Image */}
+                    <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden bg-[#EFE8D8] border border-[#E4DAC8] mb-6">
+                      <img
+                        src={craft.image}
+                        alt={title}
+                        className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-700 ease-out"
+                        onError={(e) => {
+                          e.currentTarget.onerror = null
+                          e.currentTarget.src =
+                            "https://images.unsplash.com/photo-1590736969955-71cc94801759?w=800&h=800&fit=crop&auto=format"
+                        }}
+                      />
+
+                      {craft.gi_tagged && (
+                        <span className="absolute top-4 left-4 bg-[#FDFBF7]/95 backdrop-blur-xs text-[#241C15] text-xs font-sans font-medium px-3 py-1 rounded-full border border-[#E4DAC8] shadow-xs">
+                          GI Certified
+                        </span>
+                      )}
+
+                      <span className="absolute bottom-4 left-4 bg-[#241C15]/85 backdrop-blur-xs text-[#FDFBF7] text-xs font-sans px-3 py-1 rounded-md">
+                        {craft.category}
+                      </span>
+                    </div>
+
+                    {/* Craft Name & Description */}
+                    <div className="space-y-2">
+                      <h3 className="font-serif text-2xl sm:text-3xl text-[#241C15] font-normal leading-tight tracking-tight">
+                        {title}
+                      </h3>
+
+                      {desc && (
+                        <p className="text-sm sm:text-base text-[#5B5750] font-sans font-light leading-relaxed line-clamp-3">
+                          {desc}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Subtle Price & Stock Line */}
+                  <div className="pt-6 mt-6 border-t border-[#E4DAC8]">
+                    <div className="flex items-baseline justify-between">
+                      <span className="font-serif text-2xl sm:text-3xl text-[#241C15] font-normal">
+                        {fmt(craft.price)}
+                      </span>
+                      <span className="text-xs uppercase tracking-wider font-semibold text-[#B7592F] font-sans">
+                        Available · {qty} pieces
+                      </span>
+                    </div>
+
+                    {/* Restrained Actions */}
+                    <div className="flex items-center justify-between pt-4 mt-3 border-t border-[#EFE8D8] text-xs font-sans text-[#6B6255]">
+                      <button
+                        onClick={onOpenUploadModal}
+                        className="hover:text-[#241C15] transition-colors cursor-pointer"
+                      >
+                        Edit Details
+                      </button>
+                      <button
+                        onClick={() => {
+                          showToast(`Craft "${title}" details ready for sharing.`)
+                        }}
+                        className="hover:text-[#B7592F] transition-colors cursor-pointer"
+                      >
+                        Share Craft
+                      </button>
+                    </div>
+                  </div>
                 </div>
+              )
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* ─── TAB 3: ORDERS ─────────────────────────────────────────────────── */}
+      {activeTab === "orders" && (
+        <section className="space-y-8">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+            <div className="space-y-2">
+              <span className="text-xs uppercase tracking-widest text-[#B7592F] font-semibold font-sans block">
+                BUYER PURCHASES
+              </span>
+              <h2 className="font-serif text-3xl sm:text-4xl text-[#241C15] font-normal tracking-tight">
+                Orders
+              </h2>
+              <p className="text-sm text-[#6B6255] font-sans font-light max-w-xl">
+                Orders placed directly by buyers. Pack the items securely and mark shipped for 
+                India Post or courier pickup.
+              </p>
+            </div>
+
+            {/* Understated Filter Links */}
+            <div className="flex items-center gap-4 text-xs font-sans">
+              {(["all", "In Workshop", "Shipped", "Delivered"] as const).map((st) => (
+                <button
+                  key={st}
+                  onClick={() => setOrderFilter(st)}
+                  className={`pb-1 transition-colors cursor-pointer border-b ${
+                    orderFilter === st
+                      ? "border-[#B7592F] text-[#241C15] font-semibold"
+                      : "border-transparent text-[#8C7E6D] hover:text-[#241C15]"
+                  }`}
+                >
+                  {st === "all" ? "All" : st}
+                </button>
               ))}
+            </div>
+          </div>
+
+          {filteredOrders.length === 0 ? (
+            <div className="p-12 text-center bg-white rounded-3xl border border-[#EFE8D8]">
+              <p className="text-sm text-[#6B6255] font-sans">
+                No orders matching filter "{orderFilter}".
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredOrders.map((order) => {
+                const canMarkShipped =
+                  order.status === "In Workshop" ||
+                  order.status === "Confirmed" ||
+                  order.status === "Quality Passed" ||
+                  order.status === "Ready for Pickup"
+
+                return (
+                  <div
+                    key={order.id}
+                    className="p-6 bg-white rounded-3xl border border-[#E4DAC8] flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-xs"
+                  >
+                    <div className="flex items-center gap-5">
+                      <img
+                        src={order.productImage}
+                        alt={order.productTitle}
+                        className="w-20 h-20 rounded-2xl object-cover border border-[#E4DAC8] shrink-0"
+                        onError={(e) => {
+                          e.currentTarget.onerror = null
+                          e.currentTarget.src =
+                            "https://images.unsplash.com/photo-1590736969955-71cc94801759?w=800&h=800&fit=crop&auto=format"
+                        }}
+                      />
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 text-xs text-[#8C7E6D] font-sans">
+                          <span className="font-mono font-medium text-[#241C15]">{order.id}</span>
+                          <span>·</span>
+                          <span>{order.orderDate}</span>
+                        </div>
+                        <h4 className="font-serif text-xl text-[#241C15] font-normal leading-snug">
+                          {order.productTitle}
+                        </h4>
+                        <p className="text-xs text-[#6B6255] font-sans">
+                          Buyer: <strong>{order.buyerName}</strong> ({order.deliveryAddress?.city || "Jaipur"}) · Quantity: {order.quantity || 1}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-between md:justify-end gap-6 shrink-0 border-t md:border-t-0 pt-4 md:pt-0 border-[#EFE8D8]">
+                      <div className="text-left md:text-right font-sans">
+                        <span className="font-serif text-2xl text-[#241C15] font-normal block">
+                          {fmt(order.totalAmount)}
+                        </span>
+                        <span className="text-xs text-emerald-700 font-medium">
+                          Direct Payout
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-[#5B5750] px-4 py-2 rounded-full bg-[#FAF7F2] border border-[#E4DAC8] font-sans font-medium">
+                          {order.status}
+                        </span>
+
+                        {canMarkShipped && (
+                          <button
+                            onClick={() => {
+                              onUpdateOrderStatus(order.id, "Shipped")
+                              showToast(`Order #${order.id} marked as Shipped! India Post notified.`)
+                            }}
+                            className="bg-[#241C15] hover:bg-[#3A2C20] text-[#FDFBF7] text-xs font-semibold px-4 py-2 rounded-full transition-colors cursor-pointer font-sans"
+                          >
+                            Mark Shipped
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           )}
         </section>
       )}
-
-      {/* ─── 6. SECTION: YOUR CRAFT, YOUR EARNINGS & STUDIO TIMELINE ────────── */}
-      {(activeSection === "all" || activeSection === "earnings") && (
-        <section className="space-y-8 pt-6">
-          <div>
-            <span className="text-[10px] uppercase tracking-widest text-[#B7592F] font-semibold block">
-              TRANSPARENCY
-            </span>
-            <h2 className="font-serif text-2xl sm:text-3xl text-[#241C15] font-normal tracking-tight">
-              Your Craft, Your Earnings
-            </h2>
-            <p className="text-xs sm:text-sm text-[#6B6255] font-light">
-              Fair-wage earnings and 100% direct bank transfers without middlemen deductions.
-            </p>
-          </div>
-
-          {/* Numbers in Typography & Whitespace (NO corporate dashboard cards) */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 py-6 border-y border-[#EFE8D8]">
-            <div className="space-y-1">
-              <span className="font-serif text-3xl sm:text-4xl font-normal text-[#241C15] block">
-                {fmt(currentTotalRevenue)}
-              </span>
-              <span className="text-xs uppercase tracking-wider text-[#8C7E6D] block">
-                Direct Craft Revenue
-              </span>
-              <span className="text-[11px] text-[#5B5750] font-light">
-                {currentTotalOrders} pieces ordered
-              </span>
-            </div>
-
-            <div className="space-y-1">
-              <span className="font-serif text-3xl sm:text-4xl font-normal text-[#B7592F] block">
-                {fmt(Math.round(currentTotalRevenue * 0.76))}
-              </span>
-              <span className="text-xs uppercase tracking-wider text-[#8C7E6D] block">
-                Artisan Earnings
-              </span>
-              <span className="text-[11px] text-[#5B5750] font-light">
-                Direct wages + material reimbursement
-              </span>
-            </div>
-
-            <div className="space-y-1">
-              <span className="font-serif text-3xl sm:text-4xl font-normal text-emerald-800 block">
-                {fmt(Math.round(currentTotalRevenue * 1.65))}
-              </span>
-              <span className="text-xs uppercase tracking-wider text-[#8C7E6D] block">
-                Middleman Cut Saved
-              </span>
-              <span className="text-[11px] text-emerald-700 font-light">
-                Zero agent commissions
-              </span>
-            </div>
-
-            <div className="space-y-1">
-              <span className="font-serif text-3xl sm:text-4xl font-normal text-[#241C15] block">
-                100%
-              </span>
-              <span className="text-xs uppercase tracking-wider text-[#8C7E6D] block">
-                Direct Benefit Transfer
-              </span>
-              <span className="text-[11px] text-[#5B5750] font-light truncate block">
-                Linked to {seller.upiId}
-              </span>
-            </div>
-          </div>
-
-          {/* Editorial Visual Timeline ("Your Month in the Studio") */}
-          <div className="bg-[#FAF7F2] rounded-3xl p-6 sm:p-8 border border-[#EFE8D8] space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h3 className="font-serif text-lg sm:text-xl text-[#241C15] font-normal">
-                  Your Timeline in the Studio
-                </h3>
-                <p className="text-xs text-[#6B6255] font-light">
-                  A quiet view of your pieces finding homes over time.
-                </p>
-              </div>
-
-              {/* Time Switcher */}
-              <div className="flex flex-wrap items-center gap-1 bg-white p-1 rounded-full border border-[#EFE8D8]">
-                <button
-                  onClick={() => setTimePeriod("year")}
-                  className={`text-xs px-3 py-1 rounded-full transition-colors cursor-pointer ${
-                    timePeriod === "year"
-                      ? "bg-[#241C15] text-white font-medium"
-                      : "text-[#6B6255] hover:text-[#241C15]"
-                  }`}
-                >
-                  Yearly (2026)
-                </button>
-                <button
-                  onClick={() => setTimePeriod("month")}
-                  className={`text-xs px-3 py-1 rounded-full transition-colors cursor-pointer ${
-                    timePeriod === "month"
-                      ? "bg-[#241C15] text-white font-medium"
-                      : "text-[#6B6255] hover:text-[#241C15]"
-                  }`}
-                >
-                  Monthly (Sep)
-                </button>
-                <button
-                  onClick={() => setTimePeriod("week")}
-                  className={`text-xs px-3 py-1 rounded-full transition-colors cursor-pointer ${
-                    timePeriod === "week"
-                      ? "bg-[#241C15] text-white font-medium"
-                      : "text-[#6B6255] hover:text-[#241C15]"
-                  }`}
-                >
-                  Daily (7 Days)
-                </button>
-
-                <div className="flex items-center gap-1 px-2 text-xs text-[#6B6255]">
-                  <span>Date:</span>
-                  <input
-                    type="date"
-                    value={selectedCustomDate}
-                    onChange={(e) => {
-                      setSelectedCustomDate(e.target.value)
-                      setTimePeriod("custom_date")
-                    }}
-                    className="text-xs bg-transparent text-[#241C15] outline-none cursor-pointer"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Minimal, Thin, Elegant Timeline Visualization */}
-            <div className="pt-4 space-y-3">
-              <div className="h-44 sm:h-52 flex items-end justify-between gap-2 sm:gap-4 border-b border-[#E4DAC8] pb-1 px-2">
-                {salesGraphData.map((item, idx) => {
-                  const barHeight = Math.max(
-                    14,
-                    Math.round((item.revenue / maxRevenue) * 160),
-                  )
-                  return (
-                    <div
-                      key={idx}
-                      className="flex-1 flex flex-col items-center gap-2 group relative"
-                    >
-                      {/* Quiet Hover Tooltip */}
-                      <div className="absolute -top-10 bg-[#241C15] text-[#FDFBF7] text-[10px] px-2.5 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10 whitespace-nowrap shadow-sm">
-                        <span>{fmt(item.revenue)} · {item.orders} orders</span>
-                      </div>
-
-                      {/* Thin Warm Bar */}
-                      <div
-                        style={{ height: `${barHeight}px` }}
-                        className="w-full max-w-[28px] bg-gradient-to-t from-[#B7592F] to-[#C9922E] rounded-t-sm group-hover:brightness-110 transition-all shadow-2xs"
-                      />
-
-                      {/* Label */}
-                      <span className="text-[10px] text-[#8C7E6D] font-light truncate max-w-[48px] text-center">
-                        {item.label}
-                      </span>
-                    </div>
-                  )
-                })}
-              </div>
-
-              {/* Quiet Scale Reference */}
-              <div className="flex justify-between text-[11px] text-[#8C7E6D] font-light px-2">
-                <span>Base: ₹0</span>
-                <span>
-                  Average: {fmt(Math.round(currentTotalRevenue / salesGraphData.length))}
-                </span>
-                <span>Peak: {fmt(maxRevenue)}</span>
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* ─── 7. SECTION: THE HANDS BEHIND THE CRAFT (STORY & PROFILE) ───────── */}
-      {(activeSection === "all" || activeSection === "story") && (
-        <section className="bg-[#FAF7F2] rounded-3xl p-6 sm:p-10 border border-[#EFE8D8] space-y-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
-            {/* Story Image */}
-            <div className="lg:col-span-5 relative">
-              <div className="relative rounded-2xl overflow-hidden aspect-[4/3] bg-[#EFE8D8] shadow-sm">
-                <img
-                  src="https://images.unsplash.com/photo-1590736969955-71cc94801759?w=1000&auto=format&fit=crop&q=80"
-                  alt={seller.name}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-            </div>
-
-            {/* Narrative */}
-            <div className="lg:col-span-7 space-y-4">
-              <span className="text-[10px] uppercase tracking-widest text-[#B7592F] font-semibold block">
-                THE HANDS BEHIND THE CRAFT
-              </span>
-
-              <h2 className="font-serif text-2xl sm:text-3xl text-[#241C15] font-normal tracking-tight">
-                {seller.name}
-              </h2>
-
-              <p className="text-sm text-[#5B5750] leading-relaxed font-light">
-                {seller.name} is a fifth-generation potter practicing within the renowned {seller.clusterGI || "Sanganer Craft Guild, Jaipur"}. Working with crushed quartz, fuller's earth, and natural cobalt oxides, each piece is hand-shaped, painted with squirrel-hair brushes, and kiln-fired to 850°C.
-              </p>
-
-              <p className="font-serif text-base text-[#241C15] font-normal border-l-2 border-[#B7592F] pl-4 my-2">
-                "Every piece carries the memory of the hands that shaped it, the clay of the earth, and the fire of the kiln."
-              </p>
-
-              <div className="pt-2 flex flex-wrap items-center gap-6 text-xs text-[#6B6255]">
-                <div>
-                  <span className="text-[#8C7E6D] block">Associated Guild:</span>
-                  <span className="font-medium text-[#241C15]">{seller.associatedGuild || "Sanganer Blue Pottery Artisans Society"}</span>
-                </div>
-                <div>
-                  <span className="text-[#8C7E6D] block">Workshop Address:</span>
-                  <span className="font-medium text-[#241C15]">{seller.workshopAddress || "Kumhar Mohalla, Sanganer, Jaipur 302029"}</span>
-                </div>
-              </div>
-
-              <div className="pt-2">
-                <button
-                  onClick={onOpenEditProfile}
-                  className="text-xs font-medium text-[#241C15] hover:text-[#B7592F] transition-colors cursor-pointer flex items-center gap-1.5"
-                >
-                  <span>Update Studio & Story Details</span>
-                  <span>→</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* ─── 8. STUDIO QUIET FOOTER ────────────────────────────────────────── */}
-      <footer className="pt-8 border-t border-[#EFE8D8] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#8C7E6D]">
-        <p>
-          {seller.shopName} · Digital Craft Studio · Supported by MoSJE Direct Payout
-        </p>
-        <div className="flex items-center gap-4">
-          <button
-            onClick={onOpenUploadModal}
-            className="hover:text-[#241C15] cursor-pointer"
-          >
-            + Add Craft
-          </button>
-          <span>·</span>
-          <button
-            onClick={onOpenEditProfile}
-            className="hover:text-[#241C15] cursor-pointer"
-          >
-            Studio Settings
-          </button>
-          <span>·</span>
-          <button
-            onClick={onSwitchToBuyer}
-            className="hover:text-[#241C15] cursor-pointer"
-          >
-            Buyer Marketplace
-          </button>
-        </div>
-      </footer>
     </div>
   )
 }

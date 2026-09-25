@@ -186,7 +186,7 @@ export const TRANSLATIONS: Record<string, Record<LanguageCode, string>> = {
 
   // ─── Categories (Handmade Crafts Only) ────────────────────────────────────
   catAll: {
-    en: "All Hand Made Crafts",
+    en: "All Crafts",
     hi: "सभी हस्तनिर्मित शिल्प",
     mr: "सर्व हस्तनिर्मित कला",
     bn: "সকল হস্তশিল্প",
@@ -204,7 +204,7 @@ export const TRANSLATIONS: Record<string, Record<LanguageCode, string>> = {
     ar: "جميع الحرف اليدوية",
   },
   catPottery: {
-    en: "Pottery & Clay",
+    en: "Pottery",
     hi: "मिट्टी व ब्लू पॉटरी",
     mr: "मातीची भांडी व पॉटरी",
     bn: "মৃৎশিল্প ও ব্লু পটারি",
@@ -222,12 +222,12 @@ export const TRANSLATIONS: Record<string, Record<LanguageCode, string>> = {
     ar: "الفخار والخزف",
   },
   catTextile: {
-    en: "Textiles & Weaves",
+    en: "Textiles",
     hi: "हथकरघा वस्त्र व बुनाई",
     mr: "हातमाग व विणकाम",
     bn: "তাঁত ও টেক্সটাইল বয়ন",
     ta: "கைத்தறி நெசவு ஆடைகள்",
-    te: "చేనేత వస్త్రాలు & నేతపని",
+    te: "చేనేత వస్త్రాలు & నేతపনি",
     gu: "હાથશાળ વણાટકામ",
     kn: "ಕೈಮಗ್ಗ ನೇಯ್ಗೆ & ಜವಳಿ",
     ml: "കൈത്തറി വസ്ത്രങ്ങളും നെയ്ത്തും",
@@ -240,7 +240,7 @@ export const TRANSLATIONS: Record<string, Record<LanguageCode, string>> = {
     ar: "المنسوجات والنسيج اليدوي",
   },
   catWoodwork: {
-    en: "Wood Carving",
+    en: "Woodwork",
     hi: "काष्ठ कला व नक्काशी",
     mr: "लाकूडकाम व कोरीव कला",
     bn: "কাঠের খোদাই শিল্প",
@@ -258,12 +258,12 @@ export const TRANSLATIONS: Record<string, Record<LanguageCode, string>> = {
     ar: "النحت على الخشب",
   },
   catLeather: {
-    en: "Leather Craft",
+    en: "Leather",
     hi: "चर्म शिल्प व कोल्हापुरी",
     mr: "अस्सल कातडी काम",
     bn: "হাতে তৈরি চামড়ার কাজ",
     ta: "தோல் கைவினைப் பொருட்கள்",
-    te: "తోలు చేతిపనులు",
+    te: "తోలు చేतिపనులు",
     gu: "ચર્મ હસ્તકળા",
     kn: "ಚರ್ಮದ ಕರಕುಶಲತೆ",
     ml: "തുകൽ കരകൗശലങ്ങൾ",
@@ -276,7 +276,7 @@ export const TRANSLATIONS: Record<string, Record<LanguageCode, string>> = {
     ar: "الصناعات الجلدية الحرفية",
   },
   catMetalwork: {
-    en: "Metal & Bell Craft",
+    en: "Metalwork",
     hi: "धातु व कांस्य शिल्प",
     mr: "धातू व कास्य शिल्प",
     bn: "ধাতব ও ঢোকরা শিল্প",
@@ -294,7 +294,7 @@ export const TRANSLATIONS: Record<string, Record<LanguageCode, string>> = {
     ar: "المشغولات المعدنية والنحاسية",
   },
   catJewelry: {
-    en: "Heritage Jewelry",
+    en: "Jewelry",
     hi: "पारंपरिक आभूषण",
     mr: "पारंपरिक दागिने",
     bn: "ঐতিহ্যবাহী গহনা",
@@ -312,7 +312,7 @@ export const TRANSLATIONS: Record<string, Record<LanguageCode, string>> = {
     ar: "المجوهرات التراثية المصنوعة يدوياً",
   },
   catHandicrafts: {
-    en: "Handicrafts & Decor",
+    en: "Decor",
     hi: "हस्तशिल्प व सजावट",
     mr: "हस्तकला व सजावट",
     bn: "হস্তশিল্প ও গৃহসজ্জা",
@@ -330,7 +330,7 @@ export const TRANSLATIONS: Record<string, Record<LanguageCode, string>> = {
     ar: "التحف الحرفية والديكور",
   },
   catFolkArt: {
-    en: "Folk & Tribal Art",
+    en: "Folk Art",
     hi: "लोक व जनजातीय कला",
     mr: "लोककला व आदिवासी कला",
     bn: "লোক ও উপজাতীয় চিত্রশিল্প",
@@ -348,7 +348,7 @@ export const TRANSLATIONS: Record<string, Record<LanguageCode, string>> = {
     ar: "الفنون الشعبية والقبلية التراثية",
   },
   catBamboo: {
-    en: "Bamboo & Cane",
+    en: "Bamboo",
     hi: "बांस व बेंत शिल्प",
     mr: "बांबू व वेत कला",
     bn: "বাঁশ ও বেতের কাজ",
@@ -366,7 +366,7 @@ export const TRANSLATIONS: Record<string, Record<LanguageCode, string>> = {
     ar: "مشغولات الخيزران والقصب",
   },
   catStone: {
-    en: "Stone & Marble Inlay",
+    en: "Stone",
     hi: "प्रस्तर व संगमरमर पच्चीकारी",
     mr: "दगड व संगमरवर कोरीव काम",
     bn: "পাথর ও মার্বেল খোদাই",

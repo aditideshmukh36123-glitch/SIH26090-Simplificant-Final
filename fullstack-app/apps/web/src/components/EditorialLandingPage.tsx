@@ -112,7 +112,7 @@ export default function EditorialLandingPage({
   }, [products, searchInput])
 
   const scrollToSection = (id: string) => {
-    const el = document.getElementById(id)
+    const el = document.getElementById(id) || document.getElementById("discover")
     if (el) {
       el.scrollIntoView({ behavior: "smooth" })
     }
@@ -288,25 +288,39 @@ export default function EditorialLandingPage({
             {/* Divider */}
             <div className="h-4 w-px bg-[#EFE8D8] hidden sm:block mx-0.5" />
 
-            {/* Login Options (Shown for visitors) */}
-            {!isLoggedIn ? (
-              <div className="hidden sm:flex items-center gap-2">
+            {/* Visitor vs Logged-In Account Actions */}
+            <div className="hidden sm:flex items-center gap-2.5">
+              {/* Buyer action: Login as Buyer if not logged in as buyer */}
+              {(!isLoggedIn || currentUser.role !== "buyer") && (
                 <button
                   onClick={handleBuyerLoginClick}
-                  className="px-2.5 py-1 text-xs font-medium text-[#5B5750] hover:text-[#241C15] hover:bg-[#F7F2E9] rounded-full transition-colors cursor-pointer whitespace-nowrap"
+                  className="px-3 py-1.5 text-xs font-medium text-[#5B5750] hover:text-[#241C15] hover:bg-[#F7F2E9] rounded-lg transition-colors cursor-pointer whitespace-nowrap"
                 >
                   Login as Buyer
                 </button>
+              )}
 
+              {/* Artist action: If logged in as artisan, show phone number button to open studio; otherwise show Login as Artist */}
+              {isLoggedIn && currentUser.role === "artisan" ? (
+                <button
+                  onClick={onEnterAsArtist}
+                  className="px-3.5 py-1.5 text-xs font-medium text-[#241C15] bg-[#FAF7F2] hover:bg-[#EFE8D8] rounded-lg border border-[#E4DAC8] transition-colors cursor-pointer font-sans"
+                  title={`Open My Craft Studio (${currentUser.mobile || "8830070893"})`}
+                >
+                  {currentUser.mobile || "8830070893"}
+                </button>
+              ) : (
                 <button
                   onClick={handleArtistLoginClick}
-                  className="px-3 py-1 text-xs font-medium text-[#B7592F] hover:text-[#964724] border border-[#B7592F]/40 hover:border-[#B7592F] bg-[#B7592F]/5 hover:bg-[#B7592F]/10 rounded-full transition-colors cursor-pointer whitespace-nowrap"
+                  className="px-3.5 py-1.5 text-xs font-medium text-[#B7592F] hover:text-[#964724] border border-[#B7592F]/40 hover:border-[#B7592F] bg-[#B7592F]/5 hover:bg-[#B7592F]/10 rounded-lg transition-colors cursor-pointer whitespace-nowrap font-sans"
                 >
                   Login as Artist
                 </button>
-              </div>
-            ) : (
-              /* Profile / M Trigger for Logged In User */
+              )}
+            </div>
+
+            {/* Profile Avatar Trigger when logged in */}
+            {isLoggedIn && (
               <div className="relative">
                 <button
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
@@ -329,7 +343,7 @@ export default function EditorialLandingPage({
                           {currentUser.name}
                         </p>
                         <p className="text-[10px] text-[#8C7E6D] uppercase tracking-wider">
-                          Signed in as {currentUser.role}
+                          Signed in as {currentUser.role === "artisan" ? "Master Artist" : currentUser.role}
                         </p>
                       </div>
 
@@ -341,7 +355,7 @@ export default function EditorialLandingPage({
                         }}
                         className="w-full text-left py-1 text-[#241C15] hover:text-[#B7592F] font-medium transition-colors cursor-pointer"
                       >
-                        {currentUser.role === "artisan" ? "Enter Studio →" : "View My Orders & Bag →"}
+                        {currentUser.role === "artisan" ? "Open My Craft Studio →" : "View My Orders & Bag →"}
                       </button>
 
                       <div className="pt-2 border-t border-[#EFE8D8] flex items-center justify-between">
@@ -432,24 +446,38 @@ export default function EditorialLandingPage({
 
             {/* Mobile Login Actions */}
             <div className="pt-3 border-t border-[#EFE8D8] space-y-2">
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false)
-                  handleBuyerLoginClick()
-                }}
-                className="w-full text-center py-2.5 rounded-full text-xs font-medium text-[#241C15] bg-[#FAF7F2] border border-[#E4DAC8]"
-              >
-                Login as Buyer
-              </button>
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false)
-                  handleArtistLoginClick()
-                }}
-                className="w-full text-center py-2.5 rounded-full text-xs font-medium text-[#B7592F] border border-[#B7592F]/40 bg-[#B7592F]/5"
-              >
-                Login as Artist
-              </button>
+              {(!isLoggedIn || currentUser.role !== "buyer") && (
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false)
+                    handleBuyerLoginClick()
+                  }}
+                  className="w-full text-center py-2.5 rounded-full text-xs font-medium text-[#241C15] bg-[#FAF7F2] border border-[#E4DAC8]"
+                >
+                  Login as Buyer
+                </button>
+              )}
+              {isLoggedIn && currentUser.role === "artisan" ? (
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false)
+                    onEnterAsArtist()
+                  }}
+                  className="w-full text-center py-2.5 rounded-full text-xs font-semibold text-[#241C15] bg-[#EFE8D8] border border-[#C9922E]/40"
+                >
+                  My Craft Studio ({currentUser.name})
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false)
+                    handleArtistLoginClick()
+                  }}
+                  className="w-full text-center py-2.5 rounded-full text-xs font-medium text-[#B7592F] border border-[#B7592F]/40 bg-[#B7592F]/5"
+                >
+                  Login as Artist
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -572,16 +600,9 @@ export default function EditorialLandingPage({
             <div className="flex flex-wrap items-center gap-4 pt-2">
               <button
                 onClick={onEnterAsBuyer}
-                className="bg-[#241C15] hover:bg-[#3A2C20] text-[#FDFBF7] px-7 py-3.5 rounded-full text-sm font-medium tracking-wide shadow-xs hover:shadow transition-all hover:scale-[1.01] cursor-pointer"
+                className="bg-[#241C15] hover:bg-[#3A2C20] text-[#FDFBF7] px-7 py-3.5 rounded-xl text-sm font-medium tracking-wide shadow-xs hover:shadow transition-all hover:scale-[1.01] cursor-pointer"
               >
                 Explore Crafts
-              </button>
-
-              <button
-                onClick={onEnterAsArtist}
-                className="border border-[#241C15]/40 hover:border-[#241C15] bg-[#FDFBF7]/40 hover:bg-[#FDFBF7]/80 backdrop-blur-xs text-[#241C15] px-6 py-3.5 rounded-full text-sm font-medium tracking-wide transition-all cursor-pointer"
-              >
-                I'm an Artist
               </button>
             </div>
 
@@ -716,7 +737,7 @@ export default function EditorialLandingPage({
         <div className="mt-14 text-center">
           <button
             onClick={onEnterAsBuyer}
-            className="inline-flex items-center gap-2 bg-[#FAF7F2] hover:bg-[#EFE8D8] border border-[#E4DAC8] text-[#241C15] px-8 py-3.5 rounded-full text-xs font-medium tracking-wide transition-all shadow-xs cursor-pointer"
+            className="inline-flex items-center gap-2 bg-[#FAF7F2] hover:bg-[#EFE8D8] border border-[#E4DAC8] text-[#241C15] px-8 py-3.5 rounded-xl text-xs font-medium tracking-wide transition-all shadow-xs cursor-pointer"
           >
             <span>Explore all {products.length} crafts in the catalog</span>
             <span>→</span>
@@ -724,147 +745,7 @@ export default function EditorialLandingPage({
         </div>
       </section>
 
-      {/* ─── 5. ARTISAN STORY SECTION ──────────────────────────────────────── */}
-      <section
-        id="stories"
-        className="bg-[#F7F2E9] py-16 sm:py-24 border-t border-[#EFE8D8]"
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
-            {/* Story Visual */}
-            <div className="lg:col-span-6 relative">
-              <div className="relative rounded-3xl overflow-hidden bg-[#EFE8D8] shadow-lg border border-[#E4DAC8]">
-                <img
-                  src="https://images.unsplash.com/photo-1590736969955-71cc94801759?w=1000&auto=format&fit=crop&q=80"
-                  alt="Traditional Indian potter at pottery kiln in Rajasthan"
-                  className="w-full aspect-[4/3] object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#241C15]/75 via-transparent to-transparent pointer-events-none" />
-                <div className="absolute bottom-5 left-5 right-5 text-white">
-                  <p className="font-serif text-sm italic text-[#FDFBF7]">
-                    "When you touch a blue pottery bowl, you are not touching
-                    painted mud. You are touching crushed quartz stone from the
-                    Aravalli hills, painted with cobalt that only reveals its true
-                    blue inside the woodfire kiln."
-                  </p>
-                  <p className="text-[11px] text-[#E4DAC8] mt-2 font-medium">
-                    — Mohan Lal Kumhar, 5th Generation Blue Pottery Master
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Story Narrative */}
-            <div className="lg:col-span-6 space-y-6 text-left">
-              <div className="inline-flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-[#B7592F]" />
-                <span className="text-[11px] font-semibold tracking-[0.2em] text-[#B7592F] uppercase">
-                  THE HUMAN SIDE
-                </span>
-              </div>
-
-              <h2 className="font-serif text-3xl sm:text-4xl text-[#241C15] font-normal leading-tight tracking-tight">
-                Behind every craft <br />
-                <span className="italic font-light">is a maker.</span>
-              </h2>
-
-              <p className="text-sm sm:text-base text-[#5B5750] leading-relaxed font-light">
-                Meet the hands, places and traditions behind the pieces you
-                discover. In an age of mass-produced sameness, Indian crafts
-                embody patience, living memory, and a sacred relationship with
-                clay, wood, yarn, and metal.
-              </p>
-
-              <div className="grid grid-cols-2 gap-4 pt-2">
-                <div className="p-4 bg-[#FDFBF7] rounded-2xl border border-[#E4DAC8]">
-                  <p className="text-xl font-serif font-bold text-[#B7592F]">
-                    100%
-                  </p>
-                  <p className="text-xs font-semibold text-[#241C15] mt-1">
-                    Direct Benefit Transfer
-                  </p>
-                  <p className="text-[11px] text-[#8C7E6D] mt-0.5 font-light">
-                    Every rupee reaches the artisan's registered bank account.
-                  </p>
-                </div>
-
-                <div className="p-4 bg-[#FDFBF7] rounded-2xl border border-[#E4DAC8]">
-                  <p className="text-xl font-serif font-bold text-[#C9922E]">
-                    GI
-                  </p>
-                  <p className="text-xs font-semibold text-[#241C15] mt-1">
-                    Geographical Indication
-                  </p>
-                  <p className="text-[11px] text-[#8C7E6D] mt-0.5 font-light">
-                    Preserving hereditary intellectual property and heritage.
-                  </p>
-                </div>
-              </div>
-
-              <div className="pt-2">
-                <button
-                  onClick={onEnterAsBuyer}
-                  className="inline-flex items-center gap-2 text-xs font-medium text-[#241C15] hover:text-[#B7592F] transition-colors cursor-pointer"
-                >
-                  <span>Explore stories from living craft clusters</span>
-                  <span>→</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ─── 6. HERITAGE PROMISES (QUIET LUXURY) ───────────────────────────── */}
-      <section className="py-14 sm:py-20 border-t border-[#EFE8D8] max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 text-left">
-          <div className="space-y-1.5">
-            <span className="text-base">🪙</span>
-            <h4 className="text-xs font-bold uppercase tracking-wider text-[#241C15]">
-              Direct Benefit Transfer
-            </h4>
-            <p className="text-xs text-[#6B6255] font-light leading-relaxed">
-              Zero middlemen deductions. 100% of fair craft wages reach artisan
-              accounts directly.
-            </p>
-          </div>
-
-          <div className="space-y-1.5">
-            <span className="text-base">📜</span>
-            <h4 className="text-xs font-bold uppercase tracking-wider text-[#241C15]">
-              Certified Provenance
-            </h4>
-            <p className="text-xs text-[#6B6255] font-light leading-relaxed">
-              Every item is certified through official Geographical Indication
-              guild registries.
-            </p>
-          </div>
-
-          <div className="space-y-1.5">
-            <span className="text-base">🌿</span>
-            <h4 className="text-xs font-bold uppercase tracking-wider text-[#241C15]">
-              Natural & Sustainable
-            </h4>
-            <p className="text-xs text-[#6B6255] font-light leading-relaxed">
-              Quartz stone, river clays, natural vegetable lacquers, and pure
-              mulberry silks.
-            </p>
-          </div>
-
-          <div className="space-y-1.5">
-            <span className="text-base">📦</span>
-            <h4 className="text-xs font-bold uppercase tracking-wider text-[#241C15]">
-              Insured White-Glove Transit
-            </h4>
-            <p className="text-xs text-[#6B6255] font-light leading-relaxed">
-              Carefully packed for fragile ceramic and handloom transit with
-              milestone tracking.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* ─── 7. EDITORIAL FOOTER ───────────────────────────────────────────── */}
+      {/* ─── 5. EDITORIAL FOOTER ───────────────────────────────────────────── */}
       <footer className="border-t border-[#EFE8D8] bg-[#FAF7F2] py-12 sm:py-16 text-xs text-[#6B6255]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
@@ -902,7 +783,7 @@ export default function EditorialLandingPage({
                 </li>
                 <li>
                   <button
-                    onClick={() => scrollToSection("stories")}
+                    onClick={() => scrollToSection("discover")}
                     className="hover:text-[#241C15] cursor-pointer"
                   >
                     Artisan Stories
@@ -926,10 +807,10 @@ export default function EditorialLandingPage({
                 </li>
                 <li>
                   <button
-                    onClick={onOpenLogin}
+                    onClick={onOpenArtistLogin}
                     className="hover:text-[#241C15] cursor-pointer"
                   >
-                    Guild Login
+                    Login as Artist
                   </button>
                 </li>
               </ul>
